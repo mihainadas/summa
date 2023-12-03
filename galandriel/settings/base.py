@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'galandriel.apps.MyAdminConfig', # replaced 'django.contrib.admin' with custom admin site
+    'core',
     'glife',
 
 ]
