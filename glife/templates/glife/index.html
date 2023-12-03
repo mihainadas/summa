@@ -1,4 +1,6 @@
-<script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
-<h1>Project Summa - Glife Dashboard</h1>
-<a href="/admin">Admin</a>
-<div hx-get="/glife/time" hx-trigger="every 1s"></div>
+{% extends "core/index.html" %}
+
+{% block content %}
+<h2>Glife</h2>
+<div hx-get="/glife/time" hx-trigger="load, every 1s"></div>
+{% endblock %}
