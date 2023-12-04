@@ -8,6 +8,7 @@ DATABASES = {
 }
 
 DEBUG = False
+ALLOWED_HOSTS = ["*"]
 
 LOGGING["handlers"]["file"]["level"] = "WARNING"
 LOGGING["loggers"]["django"]["level"] = "WARNING"
