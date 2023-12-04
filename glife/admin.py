@@ -16,3 +16,4 @@ class DataSourceAdmin(ModelAdmin):
 class OriginalTextAdmin(ModelAdmin):
     list_display = ("data_source", "text")
     list_filter = ("data_source",)
+    readonly_fields = ("text_md5",)

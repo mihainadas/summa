@@ -33,7 +33,9 @@ class DataSource(models.Model):
 class OriginalText(models.Model):
     data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
     text = models.TextField()
-    text_md5 = models.CharField(max_length=32, unique=True, editable=False)
+    text_md5 = models.CharField(
+        max_length=32, unique=True, editable=False, verbose_name="MD5 hash"
+    )
 
     def save(self, *args, **kwargs):
         self.text_md5 = hashlib.md5(self.text.strip().encode("utf-8")).hexdigest()
