@@ -30,4 +30,8 @@ class PreprocessedTextAdmin(ModelAdmin):
         "created_at",
     )
     list_filter = ("original_text",)
-    readonly_fields = ("created_at",)
+    readonly_fields = (
+        "preprocessing_function",
+        "preprocessing_function_kwargs",
+        "created_at",
+    )

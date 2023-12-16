@@ -48,7 +48,7 @@ def preprocess_originaltext(modeladmin, request, queryset):
         text = PreprocessedText(
             original_text=original_text,
             text=strip_diacritics(text=original_text.text),
-            preprocessing_function=strip_diacritics.__name__,
+            preprocessing_function=f"{strip_diacritics.__module__}.{strip_diacritics.__name__}",
             preprocessing_function_kwargs={"text": {original_text.text}},
         )
         try:
@@ -56,6 +56,11 @@ def preprocess_originaltext(modeladmin, request, queryset):
             preprocessed_texts_count += 1
         except Exception as e:
             logger.exception(f"Failed to preprocess text: {str(e)}")
+            modeladmin.message_user(
+                request,
+                f"Failed to preprocess text: {str(e)}",
+                messages.ERROR,
+            )
             failed_texts_count += 1
 
     if failed_texts_count == 0:
