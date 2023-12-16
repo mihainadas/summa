@@ -50,16 +50,16 @@ class OriginalText(models.Model):
         return f"{self.text} ({self.data_source})"
 
 
-class AlteredText(models.Model):
+class PreprocessedText(models.Model):
     original_text = models.ForeignKey(OriginalText, on_delete=models.CASCADE)
     text = models.TextField()
-    alteration_function = models.CharField(max_length=200, editable=False)
-    alteration_function_kwargs = models.TextField(editable=False)
+    preprocessing_function = models.CharField(max_length=200, editable=False)
+    preprocessing_function_kwargs = models.TextField(editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
 class ProcessedText(models.Model):
-    altered_text = models.ForeignKey(AlteredText, on_delete=models.CASCADE)
+    altered_text = models.ForeignKey(PreprocessedText, on_delete=models.CASCADE)
     text = models.TextField()
     processing_function = models.CharField(max_length=200, editable=False)
     processing_function_kwargs = models.TextField(editable=False)

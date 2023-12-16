@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import DataSource, OriginalText
-from .admin_actions import datasource_import_json
+from .models import DataSource, OriginalText, PreprocessedText
+from .admin_actions import datasource_import_json, preprocess_originaltext
 from django.contrib.admin import register, ModelAdmin
 
 
@@ -17,3 +17,17 @@ class OriginalTextAdmin(ModelAdmin):
     list_display = ("data_source", "text")
     list_filter = ("data_source",)
     readonly_fields = ("text_md5",)
+    actions = [preprocess_originaltext]
+
+
+@register(PreprocessedText)
+class PreprocessedTextAdmin(ModelAdmin):
+    list_display = (
+        "original_text",
+        "text",
+        "preprocessing_function",
+        "preprocessing_function_kwargs",
+        "created_at",
+    )
+    list_filter = ("original_text",)
+    readonly_fields = ("created_at",)
