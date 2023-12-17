@@ -3,12 +3,13 @@ import logging
 from .models import OriginalText, PreprocessedText
 from django.contrib import messages, admin
 from summa.preprocessors import strip_diacritics
+from summa.processors import restore_diacritics
 
 logger = logging.getLogger(__name__)
 
 
 @admin.action(description="Import JSON")
-def datasource_import_json(modeladmin, request, queryset):
+def datasource_importjson(modeladmin, request, queryset):
     saved_texts_count = 0
     failed_texts_count = 0
     for datasource in queryset:
@@ -41,7 +42,7 @@ def datasource_import_json(modeladmin, request, queryset):
 
 # Takes a queryset of OriginalText objects and creates an AlteredText object for each one.
 @admin.action(description="Preprocess")
-def preprocess_originaltext(modeladmin, request, queryset):
+def originaltext_preprocess(modeladmin, request, queryset):
     preprocessed_texts_count = 0
     failed_texts_count = 0
     for original_text in queryset:
@@ -73,5 +74,43 @@ def preprocess_originaltext(modeladmin, request, queryset):
         modeladmin.message_user(
             request,
             f"Preprocessed {preprocessed_texts_count} texts. Failed to preprocess {failed_texts_count} texts.",
+            messages.WARNING,
+        )
+
+
+# Takes a queryset of PreprocessedText objects and creates a ProcessedText object for each one.
+@admin.action(description="Process")
+def originaltext_process(modeladmin, request, queryset):
+    processed_texts_count = 0
+    failed_texts_count = 0
+    for original_text in queryset:
+        text = ProcessedText(
+            original_text=original_text,
+            text=strip_diacritics(text=original_text.text),
+            processing_function=f"{strip_diacritics.__module__}.{strip_diacritics.__name__}",
+            processing_function_kwargs={"text": original_text.text},
+        )
+        try:
+            text.save()
+            processed_texts_count += 1
+        except Exception as e:
+            logger.exception(f"Failed to process text: {str(e)}")
+            modeladmin.message_user(
+                request,
+                f"Failed to process text: {str(e)}",
+                messages.ERROR,
+            )
+            failed_texts_count += 1
+
+    if failed_texts_count == 0:
+        modeladmin.message_user(
+            request,
+            f"Processed {processed_texts_count} texts.",
+            messages.SUCCESS,
+        )
+    else:
+        modeladmin.message_user(
+            request,
+            f"Processed {processed_texts_count} texts. Failed to process {failed_texts_count} texts.",
             messages.WARNING,
         )

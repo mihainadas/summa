@@ -1,7 +1,9 @@
 from .prompt import Prompt
-from .llms import OpenAI
 
 
-def restore_diacritics(text, model=OpenAI()):
-    prompt = Prompt("restore_diacritics.md", text=text)
+def restore_diacritics(input, model, prompt_template="restore_diacritics.md"):
+    # Create a Prompt object with the specified text
+    prompt = Prompt(prompt_template, input=input)
+
+    # Generate the restored text using the specified model
     return model.generate(prompt)

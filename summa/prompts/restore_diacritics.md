@@ -1,1 +1,1 @@
-Restore the diacritics: {text}
+Restore the diacritics: {input}
