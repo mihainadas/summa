@@ -1,6 +1,6 @@
 import json
 import logging
-from .models import OriginalText, PreprocessedText
+from .models import OriginalText, PreprocessedText, ProcessedText
 from django.contrib import messages, admin
 from summa.preprocessors import strip_diacritics
 from summa.processors import restore_diacritics

@@ -20,7 +20,7 @@ def eval(original_text, restored_outputs):
         f1_chars = f1_score_chars(original_text, o.output)
         f1_words = f1_score_words(original_text, o.output)
         print(
-            f"{i:>2}. {o.model_version:<50} {o.prompt_template:<50} f1_chars={f1_chars:.6f}, f1_words={f1_words:.6f}"
+            f"{i:>2}. {o.model_version:<50} {o.prompt_template:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}"
         )
 
 
