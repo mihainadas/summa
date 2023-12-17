@@ -8,3 +8,4 @@ OUTPUT:Mâine va fi o zi frumoasă.
 # Inference
 INPUT:{input}
 OUTPUT:
+

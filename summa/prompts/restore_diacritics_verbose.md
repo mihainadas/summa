@@ -3,3 +3,4 @@ Restore the diacritics for the following INPUT. Respond strictly with the restor
 
 INPUT:{input}
 OUTPUT:
+

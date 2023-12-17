@@ -16,11 +16,11 @@ def eval(original_text, restored_outputs):
         ),
         reverse=True,
     )
-    for o in sorted_outputs:
+    for i, o in enumerate(sorted_outputs, start=1):
         f1_chars = f1_score_chars(original_text, o.output)
         f1_words = f1_score_words(original_text, o.output)
         print(
-            f"{o.model_version:<50} {o.prompt_template:<50} f1_chars={f1_chars:.6f}, f1_words={f1_words:.6f}"
+            f"{i:>2}. {o.model_version:<50} {o.prompt_template:<50} f1_chars={f1_chars:.6f}, f1_words={f1_words:.6f}"
         )
 
 
