@@ -1,9 +1,19 @@
-import summa.processors as processors
-from summa.llms import OpenAI, Meta, DeepInfra, MistralAI
-from summa.llms import ModelVersion
-from summa.evals import f1_score_chars, f1_score_words
+from summa.processors import RestoreDiacritics
+from summa.llms import (
+    PromptTemplate,
+    Prompt,
+    ModelVersion,
+    OpenAI,
+    Meta,
+    DeepInfra,
+    MistralAI,
+)
+from summa.evals import f1_score_chars, f1_score_words, ca_score_chars, ca_score_words
 
 import concurrent.futures
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def eval(original_text, restored_outputs):
@@ -19,14 +29,18 @@ def eval(original_text, restored_outputs):
     for i, o in enumerate(sorted_outputs, start=1):
         f1_chars = f1_score_chars(original_text, o.output)
         f1_words = f1_score_words(original_text, o.output)
+        ca_chars = ca_score_chars(original_text, o.output)
+        ca_words = ca_score_words(original_text, o.output)
+        gen_time = o.generation_time
         print(
-            f"{i:>2}. {o.model_version:<50} {o.prompt_template:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}"
+            f"{i:>2}. {o.model_version:<50} {o.prompt_template_filename:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}, ca_score_chars={ca_chars:.2f}, ca_score_words={ca_words:.2f}, gen_time={gen_time:.2f}"
         )
 
 
 # Modify the restore_diacritics function to accept model and prompt_template as arguments
-def restore_diacritics(input, model, prompt_template):
-    output = processors.restore_diacritics(input, model, prompt_template)
+def restore_diacritics(model, prompt_template, input):
+    rd = RestoreDiacritics(model)
+    output = rd.process(Prompt(prompt_template, input))
     return output
 
 
@@ -42,16 +56,16 @@ def run_restore_diacritics(input):
     ]
 
     prompt_templates = [
-        "restore_diacritics.md",
-        "restore_diacritics_verbose.md",
-        "restore_diacritics_verbose_1s.md",
-        "restore_diacritics_verbose_2s.md",
+        PromptTemplate(template_filename="restore_diacritics.md"),
+        PromptTemplate(template_filename="restore_diacritics_verbose.md"),
+        PromptTemplate(template_filename="restore_diacritics_verbose_1s.md"),
+        PromptTemplate(template_filename="restore_diacritics_verbose_2s.md"),
     ]
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # Submit restore_diacritics tasks to the executor
         futures = [
-            executor.submit(restore_diacritics, input, model, prompt_template)
+            executor.submit(restore_diacritics, model, prompt_template, input)
             for model in models
             for prompt_template in prompt_templates
         ]

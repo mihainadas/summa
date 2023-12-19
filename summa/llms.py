@@ -1,12 +1,104 @@
 import openai
 import logging
 import time
+import os
 from abc import ABC, abstractmethod
 from decouple import config
 from enum import Enum
 
 
+class PromptTemplate:
+    """
+    A class for storing a prompt template and its keyword arguments.
+    """
+
+    def __init__(self, template=None, template_filename=None):
+        """
+        Initializes a PromptTemplate object.
+
+        Args:
+            template (str, optional): The prompt template string. Defaults to None.
+            template_filename (str, optional): The filename of the prompt template file. Defaults to None.
+
+        Raises:
+            ValueError: If neither template nor template_filename is specified.
+        """
+        if template is not None:
+            self.template = template
+            self.template_filename = None
+        elif template_filename is not None:
+            self.template_filename = template_filename
+            self._set_template_from_file(template_filename)
+        else:
+            raise ValueError("Prompt template or template filename must be specified")
+
+    def _set_template_from_file(self, template_filename, prompts_dir="prompts"):
+        """
+        Sets the prompt template from a file.
+
+        Args:
+            prompt_template_filename (str): The filename of the prompt template file.
+            prompts_dir (str, optional): The directory where the prompt template file is located. Defaults to "prompts".
+        """
+        # Get the directory of the current file
+        module_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Construct the path to the prompt template file
+        template_path = os.path.join(module_dir, prompts_dir, template_filename)
+
+        with open(template_path, "r") as file:
+            self.template = file.read()
+
+        self.template_path = template_path
+
+    def render(self, *args, **kwargs):
+        """
+        Renders the prompt by substituting keyword arguments in the template.
+
+        Args:
+            **kwargs: Keyword arguments to be substituted in the template.
+
+        Returns:
+            str: The rendered prompt string.
+        """
+        if self.template is None:
+            return None
+
+        # Check if only a single positional argument is provided and no keyword arguments
+        if len(args) == 1 and not kwargs:
+            kwargs = {"input": args[0]}
+
+        return self.template.format(**kwargs)
+
+    def __str__(self):
+        """
+        Returns the string representation of the PromptTemplate object.
+
+        Returns:
+            str: The string representation of the PromptTemplate object.
+        """
+        return self.template
+
+
+class Prompt:
+    def __init__(self, prompt_template: PromptTemplate, *args, **kwargs):
+        self.prompt_template = prompt_template
+        if len(args) == 1 and not kwargs:
+            self.kwargs = {"input": args[0]}
+
+    @property
+    def prompt(self):
+        return self.prompt_template.render(**self.kwargs)
+
+    def __str__(self):
+        return self.prompt
+
+
 class ModelVersion(Enum):
+    """
+    Enum class representing different model versions.
+    """
+
     OPENAI_GPT_3_5_TURBO = "gpt-3.5-turbo"
     OPENAI_GPT_4 = "gpt-4"
     META_LLAMA_2_70B_CHAT_HF = "meta-llama/Llama-2-70b-chat-hf"
@@ -15,13 +107,27 @@ class ModelVersion(Enum):
     MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
 
+class TextGenerationModel(ABC):
+    def __init__(self, model, model_version: ModelVersion):
+        self.model = model
+        self.model_version = model_version.value
+
+    @abstractmethod
+    def generate(self, prompt: Prompt) -> "ModelOutput":
+        pass
+
+
 class ModelOutput:
-    def __init__(self, model, model_version: ModelVersion, prompt):
+    def __init__(
+        self, model: TextGenerationModel, model_version: ModelVersion, prompt: Prompt
+    ):
         self.model = model
         self.model_version = model_version
-        self.prompt_template = prompt.prompt_template
-        self.prompt_template_path = prompt.prompt_template_path
-        self.prompt = prompt
+        self.prompt_template = prompt.prompt_template.template
+        self.prompt_template_filename = prompt.prompt_template.template_filename
+        self.prompt_template_path = prompt.prompt_template.template_path
+        self.prompt = prompt.prompt
+        self.prompt_kwargs = prompt.kwargs
         self.output = None
         self.generation_time = None
         self._generation_time_start = time.time()
@@ -33,17 +139,7 @@ class ModelOutput:
         self.generation_time = time.time() - self._generation_time_start
 
 
-class TextGeneration(ABC):
-    def __init__(self, model, model_version: ModelVersion):
-        self.model = model
-        self.model_version = model_version.value
-
-    @abstractmethod
-    def generate(self, text: str) -> ModelOutput:
-        pass
-
-
-class OpenAIClient(TextGeneration):
+class OpenAIClient(TextGenerationModel):
     def __init__(self, model, model_version, api_key, base_url=None):
         if base_url is None:
             self.client = openai.OpenAI(api_key=api_key)
@@ -58,7 +154,7 @@ class OpenAIClient(TextGeneration):
             )
             # Generate text using the OpenAI chat completions API
             completion = self.client.chat.completions.create(
-                messages=[{"role": "user", "content": str(prompt)}],
+                messages=[{"role": "user", "content": prompt.prompt}],
                 model=self.model_version,
                 temperature=0,
             )

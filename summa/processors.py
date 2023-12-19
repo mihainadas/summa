@@ -1,9 +1,39 @@
-from .prompt import Prompt
+from typing import Any
+from .llms import TextGenerationModel, ModelOutput, Prompt
+from abc import ABC, abstractmethod
 
 
-def restore_diacritics(input, model, prompt_template="restore_diacritics.md"):
-    # Create a Prompt object with the specified text
-    prompt = Prompt(prompt_template, input=input)
+class TextProcessor(ABC):
+    """
+    Abstract base class for text processors.
 
-    # Generate the restored text using the specified model
-    return model.generate(prompt)
+    Args:
+        model (TextGenerationModel): The text generation model used for text processing.
+    """
+
+    def __init__(self, model: TextGenerationModel):
+        self.model = model
+
+    @abstractmethod
+    def process(self, prompt: Prompt) -> ModelOutput:
+        pass
+
+    def __str__(self) -> str:
+        return self.__class__.__name__
+
+
+class BasicTextProcessor(TextProcessor):
+    """
+    A processor class for basic text generation using a specified model.
+    """
+
+    def process(self, prompt):
+        return self.model.generate(prompt)
+
+
+class RestoreDiacritics(BasicTextProcessor):
+    """
+    A processor class for restoring diacritics in text using a specified model.
+    """
+
+    pass

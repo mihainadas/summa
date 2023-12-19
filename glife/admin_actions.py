@@ -2,8 +2,7 @@ import json
 import logging
 from .models import OriginalText, PreprocessedText, ProcessedText
 from django.contrib import messages, admin
-from summa.preprocessors import strip_diacritics
-from summa.processors import restore_diacritics
+from summa.preprocessors import StripDiacritics
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +44,12 @@ def datasource_importjson(modeladmin, request, queryset):
 def originaltext_preprocess(modeladmin, request, queryset):
     preprocessed_texts_count = 0
     failed_texts_count = 0
+    sd = StripDiacritics()
     for original_text in queryset:
         text = PreprocessedText(
             original_text=original_text,
-            text=strip_diacritics(text=original_text.text),
-            preprocessing_function=f"{strip_diacritics.__module__}.{strip_diacritics.__name__}",
+            text=sd.preprocess(text=original_text.text),
+            preprocessing_function=f"{sd.__class__}.{sd.__name__}",
             preprocessing_function_kwargs={"text": {original_text.text}},
         )
         try:
