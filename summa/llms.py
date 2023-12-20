@@ -94,7 +94,7 @@ class Prompt:
         return self.prompt
 
 
-class ModelVersion(Enum):
+class ModelVersions(Enum):
     """
     Enum class representing different model versions.
     """
@@ -103,12 +103,12 @@ class ModelVersion(Enum):
     OPENAI_GPT_4 = "gpt-4"
     META_LLAMA_2_70B_CHAT_HF = "meta-llama/Llama-2-70b-chat-hf"
     META_LLAMA_2_7B_CHAT_HF = "meta-llama/Llama-2-7b-chat-hf"
-    DEEPINFRA_AIROPOROS_70B = "deepinfra/airoboros-70b"
+    DEEPINFRA_AIROBOROS_70B = "deepinfra/airoboros-70b"
     MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
 
 class TextGenerationModel(ABC):
-    def __init__(self, model, model_version: ModelVersion):
+    def __init__(self, model, model_version: ModelVersions):
         self.model = model
         self.model_version = model_version.value
 
@@ -119,7 +119,7 @@ class TextGenerationModel(ABC):
 
 class ModelOutput:
     def __init__(
-        self, model: TextGenerationModel, model_version: ModelVersion, prompt: Prompt
+        self, model: TextGenerationModel, model_version: ModelVersions, prompt: Prompt
     ):
         self.model = model
         self.model_version = model_version
@@ -180,21 +180,42 @@ class DeepInfraClient(OpenAIClient):
 
 
 class OpenAI(OpenAIClient):
-    def __init__(self, model_version=ModelVersion.OPENAI_GPT_3_5_TURBO):
+    def __init__(self, model_version=ModelVersions.OPENAI_GPT_3_5_TURBO):
         api_key = config("OPENAI_API_KEY")
         super().__init__("OpenAI", model_version, api_key)
 
 
 class Meta(DeepInfraClient):
-    def __init__(self, model_version=ModelVersion.META_LLAMA_2_70B_CHAT_HF):
+    def __init__(self, model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF):
         super().__init__("Meta", model_version)
 
 
 class DeepInfra(DeepInfraClient):
-    def __init__(self, model_version=ModelVersion.DEEPINFRA_AIROPOROS_70B):
+    def __init__(self, model_version=ModelVersions.DEEPINFRA_AIROBOROS_70B):
         super().__init__("DeepInfra", model_version)
 
 
 class MistralAI(DeepInfraClient):
-    def __init__(self, model_version=ModelVersion.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1):
+    def __init__(
+        self, model_version=ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1
+    ):
         super().__init__("MistralAI", model_version)
+
+
+class ModelFactory:
+    """
+    Factory class for creating text generation models.
+    """
+
+    def __init__(self):
+        self.models = {
+            ModelVersions.OPENAI_GPT_3_5_TURBO: OpenAI,
+            ModelVersions.OPENAI_GPT_4: OpenAI,
+            ModelVersions.META_LLAMA_2_70B_CHAT_HF: Meta,
+            ModelVersions.META_LLAMA_2_7B_CHAT_HF: Meta,
+            ModelVersions.DEEPINFRA_AIROBOROS_70B: DeepInfra,
+            ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1: MistralAI,
+        }
+
+    def create(self, model_version: ModelVersions):
+        return self.models[model_version](model_version=model_version)

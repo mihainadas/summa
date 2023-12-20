@@ -2,7 +2,7 @@ from summa.processors import RestoreDiacritics
 from summa.llms import (
     PromptTemplate,
     Prompt,
-    ModelVersion,
+    ModelVersions,
     OpenAI,
     Meta,
     DeepInfra,
@@ -47,12 +47,12 @@ def restore_diacritics(model, prompt_template, input):
 def run_restore_diacritics(input):
     restored_outputs = []
     models = [
-        OpenAI(model_version=ModelVersion.OPENAI_GPT_3_5_TURBO),
-        OpenAI(model_version=ModelVersion.OPENAI_GPT_4),
-        Meta(model_version=ModelVersion.META_LLAMA_2_70B_CHAT_HF),
-        Meta(model_version=ModelVersion.META_LLAMA_2_7B_CHAT_HF),
-        DeepInfra(model_version=ModelVersion.DEEPINFRA_AIROPOROS_70B),
-        MistralAI(model_version=ModelVersion.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1),
+        OpenAI(model_version=ModelVersions.OPENAI_GPT_3_5_TURBO),
+        OpenAI(model_version=ModelVersions.OPENAI_GPT_4),
+        Meta(model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF),
+        Meta(model_version=ModelVersions.META_LLAMA_2_7B_CHAT_HF),
+        DeepInfra(model_version=ModelVersions.DEEPINFRA_AIROBOROS_70B),
+        MistralAI(model_version=ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1),
     ]
 
     prompt_templates = [

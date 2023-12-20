@@ -170,7 +170,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "ERROR",
             "propagate": True,
         },
         "glife": {

@@ -7,40 +7,8 @@ from summa.preprocessors import StripDiacritics
 logger = logging.getLogger(__name__)
 
 
-@admin.action(description="Import JSON")
-def datasource_importjson(modeladmin, request, queryset):
-    saved_texts_count = 0
-    failed_texts_count = 0
-    for datasource in queryset:
-        json_data = json.load(datasource.json_file)
-        for item in json_data:
-            text = OriginalText(
-                data_source=datasource,
-                text=item["text"],
-            )
-            try:
-                text.save()
-                saved_texts_count += 1
-            except Exception as e:
-                logger.exception(f"Failed to import text from JSON: {str(e)}")
-                failed_texts_count += 1
-
-    if failed_texts_count == 0:
-        modeladmin.message_user(
-            request,
-            f"Imported {saved_texts_count} texts.",
-            messages.SUCCESS,
-        )
-    else:
-        modeladmin.message_user(
-            request,
-            f"Imported {saved_texts_count} texts. Failed to import {failed_texts_count} texts.",
-            messages.WARNING,
-        )
-
-
 # Takes a queryset of OriginalText objects and creates an AlteredText object for each one.
-@admin.action(description="Preprocess")
+@admin.action(description="Preprocess selected %(verbose_name_plural)s)")
 def originaltext_preprocess(modeladmin, request, queryset):
     preprocessed_texts_count = 0
     failed_texts_count = 0
@@ -79,8 +47,8 @@ def originaltext_preprocess(modeladmin, request, queryset):
 
 
 # Takes a queryset of PreprocessedText objects and creates a ProcessedText object for each one.
-@admin.action(description="Process")
-def originaltext_process(modeladmin, request, queryset):
+@admin.action(description="Process selected %(verbose_name_plural)s)")
+def preprocessedtext_process(modeladmin, request, queryset):
     processed_texts_count = 0
     failed_texts_count = 0
     for original_text in queryset:
