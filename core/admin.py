@@ -59,9 +59,10 @@ class PromptTemplateAdmin(ModelAdmin):
 class TextProcessingJobAdmin(ModelAdmin):
     list_display = (
         "id",
+        "data_source",
         "preprocessor",
         "processor",
-        "llms_str",
+        "llms_count",
         "prompt_templates_count",
         "created_at",
     )
@@ -72,10 +73,10 @@ class TextProcessingJobAdmin(ModelAdmin):
     )
     readonly_fields = ("created_at",)
 
-    def llms_str(self, obj):
-        return ", ".join([str(llm) for llm in obj.llms.all()])
+    def llms_count(self, obj):
+        return obj.llms.count()
 
-    llms_str.short_description = "LLMs"
+    llms_count.short_description = "LLMs"
 
     def prompt_templates_count(self, obj):
         return obj.prompt_templates.count()
