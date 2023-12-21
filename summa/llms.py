@@ -202,20 +202,16 @@ class MistralAI(DeepInfraClient):
         super().__init__("MistralAI", model_version)
 
 
-class ModelFactory:
-    """
-    Factory class for creating text generation models.
-    """
-
-    def __init__(self):
-        self.models = {
-            ModelVersions.OPENAI_GPT_3_5_TURBO: OpenAI,
-            ModelVersions.OPENAI_GPT_4: OpenAI,
-            ModelVersions.META_LLAMA_2_70B_CHAT_HF: Meta,
-            ModelVersions.META_LLAMA_2_7B_CHAT_HF: Meta,
-            ModelVersions.DEEPINFRA_AIROBOROS_70B: DeepInfra,
-            ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1: MistralAI,
-        }
-
-    def create(self, model_version: ModelVersions):
-        return self.models[model_version](model_version=model_version)
+class Models(Enum):
+    OPENAI_GPT_3_5_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_3_5_TURBO)
+    OPENAI_GPT_4 = OpenAI(model_version=ModelVersions.OPENAI_GPT_4)
+    META_LLAMA_2_70B_CHAT_HF = Meta(
+        model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF
+    )
+    META_LLAMA_2_7B_CHAT_HF = Meta(model_version=ModelVersions.META_LLAMA_2_7B_CHAT_HF)
+    DEEPINFRA_AIROBOROS_70B = DeepInfra(
+        model_version=ModelVersions.DEEPINFRA_AIROBOROS_70B
+    )
+    MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = MistralAI(
+        model_version=ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1
+    )

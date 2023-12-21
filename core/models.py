@@ -8,7 +8,9 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from datetime import datetime
 from .utils import short_text, md5
 from .models_validators import datasource_validate_json
-from summa.llms import ModelVersions, ModelFactory
+from summa.llms import Models
+from summa.preprocessors import TextPreprocessors
+from summa.processors import TextProcessors
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def data_source_upload_path(instance, filename):
     return _upload_path(instance, filename, "data_sources")
 
 
-class TextDataSource(models.Model):
+class JSONDataSource(models.Model):
     name = models.CharField(max_length=200)
 
     file = models.FileField(
@@ -70,23 +72,51 @@ class TextDataSource(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = "JSON Data Source"
+        verbose_name_plural = "JSON Data Sources"
+
 
 class RawText(MD5TextModel):
-    data_source = models.ForeignKey(TextDataSource, on_delete=models.CASCADE)
+    data_source = models.ForeignKey(JSONDataSource, on_delete=models.CASCADE)
 
 
 class TextPreprocessor(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(
+        max_length=200, choices=[(v.name, v.name) for v in TextPreprocessors]
+    )
+    description = models.TextField(editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.description = TextPreprocessors[self.name].value.__doc__
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = "Text Preprocessor"
+        verbose_name_plural = "Text Preprocessors"
 
 
 class TextProcessor(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(
+        max_length=200, choices=[(v.name, v.name) for v in TextProcessors]
+    )
+    description = models.TextField(editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.description = TextProcessors[self.name].value.__doc__
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = "Text Processor"
+        verbose_name_plural = "Text Processors"
 
 
 class PreprocessedText(TextModel):
@@ -110,16 +140,22 @@ class PromptTemplate(MD5TextModel):
             self.text = self.file.file.read().decode("utf-8")
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.file.name}"
+
+    class Meta:
+        ordering = ["id"]
+
 
 class LLM(models.Model):
     model = models.CharField(max_length=200, editable=False)
     version = models.CharField(
-        max_length=200, choices=[(v.name, v.name) for v in ModelVersions]
+        max_length=200, choices=[(v.name, v.name) for v in Models], unique=True
     )
 
     def save(self, *args, **kwargs):
         if self.model is None or self.model == "":
-            self.model = ModelFactory().create(ModelVersions[self.version]).model
+            self.model = Models[self.version].value.model
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -128,6 +164,7 @@ class LLM(models.Model):
     class Meta:
         verbose_name = "LLM"
         verbose_name_plural = "LLMs"
+        ordering = ["model", "version"]
 
 
 class ProcessedText(TextModel):
@@ -140,9 +177,33 @@ class ProcessedText(TextModel):
 
 
 class TextProcessingJob(models.Model):
-    data_source = models.ForeignKey(TextDataSource, on_delete=models.CASCADE)
+    data_source = models.ForeignKey(JSONDataSource, on_delete=models.CASCADE)
     preprocessor = models.ForeignKey(TextPreprocessor, on_delete=models.CASCADE)
     processor = models.ForeignKey(TextProcessor, on_delete=models.CASCADE)
     llms = models.ManyToManyField(LLM)
     prompt_templates = models.ManyToManyField(PromptTemplate)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class TextProcessingJobRun(models.Model):
+    class Statuses(models.TextChoices):
+        CREATED = "CREATED", "Created"
+        STARTED = "STARTED", "Started"
+        FINISHED = "FINISHED", "Finished"
+        FAILED = "FAILED", "Failed"
+
+    job = models.ForeignKey(TextProcessingJob, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField()
+    status = models.CharField(
+        max_length=200, choices=Statuses.choices, default=Statuses.CREATED
+    )
+
+
+class TextProcessingJobRunResult(models.Model):
+    run = models.ForeignKey(TextProcessingJobRun, on_delete=models.CASCADE)
+    raw_text = models.ForeignKey(RawText, on_delete=models.CASCADE)
+    preprocessed_text = models.ForeignKey(PreprocessedText, on_delete=models.CASCADE)
+    processed_text = models.ForeignKey(ProcessedText, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any
 from .llms import TextGenerationModel, ModelOutput, Prompt
 from abc import ABC, abstractmethod
@@ -37,3 +38,12 @@ class RestoreDiacritics(BasicTextProcessor):
     """
 
     pass
+
+
+class TextProcessors(Enum):
+    """
+    An enum for the available text processors.
+    """
+
+    BASIC = BasicTextProcessor
+    RESTORE_DIACRITICS = RestoreDiacritics
