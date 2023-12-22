@@ -12,12 +12,19 @@ class PipelineRunOutput:
         raw_text: str,
         preprocessed_text: str,
         processed_outputs: List[ModelOutput],
-        evaluated_outputs: List[EvaluatorOutput],
     ):
         self.raw_text = raw_text
         self.preprocessed_text = preprocessed_text
         self.processed_outputs = processed_outputs
-        self.evaluated_outputs = evaluated_outputs
+
+    def print(self, sorted=True):
+        outputs = self.processed_outputs
+        if sorted:
+            outputs.sort(key=lambda o: o.evals[0].score, reverse=True)
+        for i, output in enumerate(outputs, start=1):
+            print(f"{i:<2}. {output}")
+            for eval in output.evals:
+                print(f"    - {eval}")
 
 
 class PipelineRunner:
@@ -73,7 +80,7 @@ class PipelineRunner:
                     evaluator, evaluator.evaluate(raw_text, output.output)
                 )
                 evaluated_outputs.append(evaluator_output)
-            output.evaluator_outputs = evaluated_outputs
+            output.evals = evaluated_outputs
 
     def run(self, raw_text: str, sequential=False) -> PipelineRunOutput:
         preprocessed_text = self._preprocess(raw_text)
@@ -82,6 +89,4 @@ class PipelineRunner:
         else:
             processed_outputs = self._process_parallel(preprocessed_text)
         evaluated_outputs = self._evaluate(raw_text, processed_outputs)
-        return PipelineRunOutput(
-            raw_text, preprocessed_text, processed_outputs, evaluated_outputs
-        )
+        return PipelineRunOutput(raw_text, preprocessed_text, processed_outputs)

@@ -1,3 +1,5 @@
+import json
+import os
 from summa.preprocessors import TextPreprocessors
 from summa.processors import TextProcessors
 from summa.llms import Models, Prompt, PromptTemplate
@@ -88,10 +90,10 @@ preprocessor = TextPreprocessors.STRIP_DIACRITICS.value
 processor = TextProcessors.BASIC.value
 llms = [
     Models.OPENAI_GPT_3_5_TURBO.value,
-    # Models.OPENAI_GPT_4.value,
+    Models.OPENAI_GPT_4.value,
     # Models.META_LLAMA_2_70B_CHAT_HF.value,
     # Models.META_LLAMA_2_7B_CHAT_HF.value,
-    # Models.DEEPINFRA_AIROBOROS_70B.value,
+    Models.DEEPINFRA_AIROBOROS_70B.value,
     # Models.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
 ]
 prompt_templates = [
@@ -101,28 +103,30 @@ prompt_templates = [
     PromptTemplate(template_filename="restore_diacritics_verbose_2s.md"),
 ]
 evaluators = [
-    Evaluators.F1_SCORE_CHARS.value,
     Evaluators.F1_SCORE_WORDS.value,
-    Evaluators.CHARACTER_ACCURACY.value,
-    Evaluators.WORD_ACCURACY.value,
+    Evaluators.F1_SCORE_WORDS_CASE_INSENSITIVE.value,
 ]
 
 runner = PipelineRunner(preprocessor, processor, llms, prompt_templates, evaluators)
+raw_texts = []
 
-while True:
-    raw_text = input("Enter text: ")
-    if raw_text == "":
-        break
+path = "data/dexonline/crawler/json/dexonline_crawler_10.json"
+full_path = os.path.join(os.getcwd(), path)
+with open(full_path, "r") as f:
+    json_data = json.load(f)
+    raw_texts = [d["text"] for d in json_data]
 
+run_outputs = []
+for raw_text in raw_texts:
+    print(f"Processing '{raw_text}'", end="... ")
     run_output = runner.run(raw_text)
+    print("Done.")
+    run_outputs.append(run_output)
 
-    # print the results
-    for i, o in enumerate(run_output.processed_outputs, start=1):
-        f1_chars = o.evaluator_outputs[0].score
-        f1_words = o.evaluator_outputs[1].score
-        ca_chars = o.evaluator_outputs[2].score
-        ca_words = o.evaluator_outputs[3].score
-        gen_time = o.generation_time
-        print(
-            f"{i:>2}. {o.model_version:<50} {o.prompt_template_filename:<50} {o.output:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}, ca_score_chars={ca_chars:.2f}, ca_score_words={ca_words:.2f}, gen_time={gen_time:.2f}"
-        )
+# average evaluation scores by model
+model_scores = {}
+for run_output in run_outputs:
+    for output in run_output.processed_outputs:
+        model_scores.setdefault(output.model_version, []).append(output.evals[0].score)
+for model_version, scores in model_scores.items():
+    print(f"{model_version}: {sum(scores) / len(scores):.2f}")

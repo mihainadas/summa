@@ -18,6 +18,9 @@ class EvaluatorOutput:
         self.evaluator = evaluator
         self.score = score
 
+    def __str__(self) -> str:
+        return f"{self.evaluator.name}: {self.score}"
+
 
 class Evaluator(ABC):
     """
@@ -113,6 +116,22 @@ class F1ScoreWordsEvaluator(Evaluator):
         recall = TP / (TP + FN) if TP + FN > 0 else 0
 
         return _f1_score(precision, recall)
+
+
+class F1ScoreWordsEvaluatorCaseInsensitive(F1ScoreWordsEvaluator):
+    """
+    Evaluates the restored text against the original text using the F1 score for word-level evaluation.
+    """
+
+    def __init__(self):
+        """
+        Initializes the evaluator.
+        """
+        self.name = "F1 Score (Words, Case Insensitive)"
+        self.description = "A word-level F1 score evaluator that is case insensitive."
+
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        return super().evaluate(raw_text.lower(), processed_text.lower())
 
 
 class F1ScoreCharsEvaluator(Evaluator):
@@ -259,6 +278,7 @@ class WordAccuracyEvaluator(Evaluator):
 
 class Evaluators(Enum):
     F1_SCORE_WORDS = F1ScoreWordsEvaluator()
+    F1_SCORE_WORDS_CASE_INSENSITIVE = F1ScoreWordsEvaluatorCaseInsensitive()
     F1_SCORE_CHARS = F1ScoreCharsEvaluator()
     CHARACTER_ACCURACY = CharacterAccuracyEvaluator()
     WORD_ACCURACY = WordAccuracyEvaluator()

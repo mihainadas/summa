@@ -131,9 +131,10 @@ class ModelOutput:
         self.output = None
         self.generation_time = None
         self._generation_time_start = time.time()
+        self.evals = None
 
     def __str__(self):
-        return f"{self.model} - {self.model_version} - {self.prompt_template_path}: {self.output} ({self.generation_time} seconds)"
+        return f"{self.model} - {self.model_version} - {self.prompt_template_filename}: {self.output} ({self.generation_time} seconds)"
 
     def measure_generation_time(self):
         self.generation_time = time.time() - self._generation_time_start
