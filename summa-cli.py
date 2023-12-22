@@ -97,9 +97,9 @@ llms = [
     # Models.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
 ]
 prompt_templates = [
-    PromptTemplate(template_filename="restore_diacritics.md"),
-    PromptTemplate(template_filename="restore_diacritics_verbose.md"),
-    PromptTemplate(template_filename="restore_diacritics_verbose_1s.md"),
+    # PromptTemplate(template_filename="restore_diacritics.md"),
+    # PromptTemplate(template_filename="restore_diacritics_verbose.md"),
+    # PromptTemplate(template_filename="restore_diacritics_verbose_1s.md"),
     PromptTemplate(template_filename="restore_diacritics_verbose_2s.md"),
 ]
 evaluators = [
@@ -110,11 +110,11 @@ evaluators = [
 runner = PipelineRunner(preprocessor, processor, llms, prompt_templates, evaluators)
 raw_texts = []
 
-path = "data/dexonline/crawler/json/dexonline_crawler_10.json"
-full_path = os.path.join(os.getcwd(), path)
-with open(full_path, "r") as f:
+json_dlrlc = "data/dexonline/dlrlc/json/dexonline_dlrlc_10.json"
+json_crawler = "data/dexonline/crawler/json/dexonline_crawler_10.json"
+with open(json_crawler, "r") as f:
     json_data = json.load(f)
-    raw_texts = [d["text"] for d in json_data]
+    raw_texts = [d["text"] for d in json_data][:3]
 
 run_outputs = []
 for raw_text in raw_texts:
