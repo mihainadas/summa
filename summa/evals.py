@@ -1,4 +1,39 @@
-def f1_score(precision, recall):
+from abc import ABC, abstractmethod
+from enum import Enum
+
+
+class Evaluator(ABC):
+    """
+    Abstract base class for all evaluators.
+    """
+
+    def __init__(self, name: str, description: str):
+        """
+        Initializes the evaluator.
+
+        Args:
+            name (str): The name of the evaluator.
+            description (str): The description of the evaluator.
+        """
+        self.name = name
+        self.description = description
+
+    @abstractmethod
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        """
+        Evaluates the restored text against the original text.
+
+        Args:
+            raw_text (str): The original text.
+            processed_text (str): The restored text.
+
+        Returns:
+            float: The score of the restoration.
+        """
+        pass
+
+
+def _f1_score(precision, recall):
     """
     Calculate the F1 score given the precision and recall.
 
@@ -16,158 +51,200 @@ def f1_score(precision, recall):
     )
 
 
-def f1_score_chars(original_text, restored_text):
+class F1ScoreWordsEvaluator(Evaluator):
     """
-    Calculate the F1 score for character-level evaluation of restored text.
-
-    Args:
-        original_text (str): The original text.
-        restored_text (str): The restored text.
-
-    Returns:
-        float: The F1 score.
+    Evaluates the restored text against the original text using the F1 score for word-level evaluation.
     """
-    # Initialize counts for true positives, false positives, and false negatives
-    TP, FP, FN = 0, 0, 0
 
-    # Iterate through the characters of the original and restored text
-    for orig_char, rest_char in zip(original_text, restored_text):
-        if orig_char == rest_char:
-            TP += 1  # Correctly restored diacritic
-        else:
-            if orig_char.lower() == rest_char.lower():
-                FN += 1  # Missed diacritic
+    def __init__(self):
+        """
+        Initializes the evaluator.
+        """
+        super().__init__("F1 Score (Words)", "A word-level F1 score evaluator.")
+
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        """
+        Evaluates the restored text against the original text using the F1 score for word-level evaluation.
+
+        Args:
+            raw_text (str): The original text.
+            processed_text (str): The restored text.
+
+        Returns:
+            float: The F1 score.
+        """
+        raw_words = self.raw_text.split()
+        processed_words = self.processed_text.split()
+
+        # Initialize counts
+        TP = 0
+        FP = 0
+        FN = 0
+
+        # Iterate through the words
+        for orig_word, rest_word in zip(raw_words, processed_words):
+            if orig_word == rest_word:
+                TP += 1  # Correctly restored word
             else:
-                FP += 1  # Incorrectly added or misplaced diacritic
+                FP += 1  # Word does not match
+                FN += 1  # Missed correct word
 
-    # Adjust for lengths
-    FP += abs(len(restored_text) - len(original_text))
+        # Adjust for length differences
+        len_diff = abs(len(raw_words) - len(processed_words))
+        FP += len_diff
+        FN += len_diff
 
-    # Calculate Precision and Recall
-    precision = TP / (TP + FP) if (TP + FP) > 0 else 0
-    recall = TP / (TP + FN) if (TP + FN) > 0 else 0
+        # Calculating Precision and Recall
+        precision = TP / (TP + FP) if TP + FP > 0 else 0
+        recall = TP / (TP + FN) if TP + FN > 0 else 0
 
-    # Calculate F1 Score
-    return f1_score(precision, recall)
+        return _f1_score(precision, recall)
 
 
-def f1_score_words(original_text, restored_text):
+class F1ScoreCharsEvaluator(Evaluator):
     """
-    Calculate the F1 score for word-level evaluation of text restoration.
-
-    Args:
-        original_text (str): The original text.
-        restored_text (str): The restored text.
-
-    Returns:
-        float: The F1 score.
+    Evaluates the restored text against the original text using the F1 score for character-level evaluation.
     """
-    # Splitting the texts into words
-    original_words = original_text.split()
-    restored_words = restored_text.split()
 
-    # Initialize counts
-    TP = 0
-    FP = 0
-    FN = 0
+    def __init__(self):
+        """
+        Initializes the evaluator.
+        """
+        super().__init__("F1 Score (Chars)", "A character-level F1 score evaluator.")
 
-    # Iterate through the words
-    for orig_word, rest_word in zip(original_words, restored_words):
-        if orig_word == rest_word:
-            TP += 1  # Correctly restored word
-        else:
-            FP += 1  # Word does not match
-            FN += 1  # Missed correct word
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        """
+        Evaluates the restored text against the original text using the F1 score for character-level evaluation.
 
-    # Adjust for length differences
-    len_diff = abs(len(original_words) - len(restored_words))
-    FP += len_diff
-    FN += len_diff
+        Args:
+            raw_text (str): The original text.
+            processed_text (str): The restored text.
 
-    # Calculating Precision and Recall
-    precision = TP / (TP + FP) if TP + FP > 0 else 0
-    recall = TP / (TP + FN) if TP + FN > 0 else 0
+        Returns:
+            float: The F1 score.
+        """
+        # Initialize counts for true positives, false positives, and false negatives
+        TP, FP, FN = 0, 0, 0
 
-    return f1_score(precision, recall)
+        # Iterate through the characters of the original and restored text
+        for raw_char, proc_char in zip(raw_text, processed_text):
+            if raw_char == proc_char:
+                TP += 1  # Correctly restored diacritic
+            else:
+                if raw_char.lower() == proc_char.lower():
+                    FN += 1  # Missed diacritic
+                else:
+                    FP += 1  # Incorrectly added or misplaced diacritic
+
+        # Adjust for lengths
+        FP += abs(len(processed_text) - len(raw_text))
+
+        # Calculate Precision and Recall
+        precision = TP / (TP + FP) if (TP + FP) > 0 else 0
+        recall = TP / (TP + FN) if (TP + FN) > 0 else 0
+
+        # Calculate F1 Score
+        return _f1_score(precision, recall)
 
 
-def ca_score_chars(original_text, restored_text):
+class CharacterAccuracyEvaluator(Evaluator):
     """
-    Calculates the character accuracy score between the original text and the restored text.
-
-    Args:
-        original_text (str): The original text.
-        restored_text (str): The restored text.
-
-    Returns:
-        float: The character accuracy score, ranging from 0 to 1.
-               A score of 1 indicates a perfect match, while a score of 0 indicates no match.
+    Evaluates the restored text against the original text using the character accuracy score.
     """
-    # Check if the number of characters match, otherwise return 0
-    if len(original_text) != len(restored_text):
-        return 0
 
-    # Initialize counts
-    total_diacritics = 0
-    correct_restorations = 0
+    def __init__(self):
+        """
+        Initializes the evaluator.
+        """
+        super().__init__("Character Accuracy", "A character-level accuracy evaluator.")
 
-    # Iterate through the characters of both texts
-    for orig_char, rest_char in zip(original_text, restored_text):
-        if orig_char.lower() in [
-            "ă",
-            "â",
-            "î",
-            "ș",
-            "ț",
-        ]:  # Check if character is a diacritic
-            total_diacritics += 1
-            if orig_char == rest_char:
-                correct_restorations += 1
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        """
+        Evaluates the restored text against the original text using the character accuracy score.
 
-    # Calculate accuracy
-    if total_diacritics == 0:
-        return 1.0  # Avoid division by zero; if no diacritics, accuracy is perfect
-    score = correct_restorations / total_diacritics
-    return score
+        Args:
+            raw_text (str): The original text.
+            processed_text (str): The restored text.
+
+        Returns:
+            float: The character accuracy score.
+        """
+        # Check if the number of characters match, otherwise return 0
+        if len(raw_text) != len(processed_text):
+            return 0
+
+        # Initialize counts
+        total_diacritics = 0
+        correct_restorations = 0
+
+        # Iterate through the characters of both texts
+        for raw_char, proc_char in zip(raw_text, processed_text):
+            if raw_char.lower() in [
+                "ă",
+                "â",
+                "î",
+                "ș",
+                "ț",
+            ]:  # Check if character is a diacritic
+                total_diacritics += 1
+                if raw_char == proc_char:
+                    correct_restorations += 1
+
+        # Calculate accuracy
+        if total_diacritics == 0:
+            return 1.0  # Avoid division by zero; if no diacritics, accuracy is perfect
+        score = correct_restorations / total_diacritics
+        return score
 
 
-def ca_score_words(original_text, restored_text):
+class WordAccuracyEvaluator(Evaluator):
     """
-    Calculates the Corrected Accuracy (CA) score for word-level evaluation.
-
-    The CA score is calculated by comparing the original text with the restored text
-    and counting the number of correctly restored words. The CA score is the ratio
-    of correctly restored words to the total number of words in the original text.
-
-    Args:
-        original_text (str): The original text.
-        restored_text (str): The restored text.
-
-    Returns:
-        float: The Corrected Accuracy (CA) score.
-
-    Raises:
-        None
+    Evaluates the restored text against the original text using the word accuracy score.
     """
-    # Splitting the texts into words
-    original_words = original_text.split()
-    restored_words = restored_text.split()
 
-    # Check if the number of words match, otherwise return 0
-    if len(original_words) != len(restored_words):
-        return 0
+    def __init__(self):
+        """
+        Initializes the evaluator.
+        """
+        super().__init__("Word Accuracy", "A word-level accuracy evaluator.")
 
-    # Initialize counts
-    total_words = len(original_words)
-    correct_restorations = 0
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        """
+        Evaluates the restored text against the original text using the word accuracy score.
 
-    # Iterate through the words
-    for orig_word, rest_word in zip(original_words, restored_words):
-        if orig_word == rest_word:
-            correct_restorations += 1  # Correctly restored word
+        Args:
+            raw_text (str): The original text.
+            processed_text (str): The restored text.
 
-    # Calculate accuracy
-    if total_words == 0:
-        return 1.0  # Avoid division by zero; if no words, accuracy is perfect
-    score = correct_restorations / total_words
-    return score
+        Returns:
+            float: The word accuracy score.
+        """
+        # Splitting the texts into words
+        raw_words = raw_text.split()
+        processed_words = processed_text.split()
+
+        # Check if the number of words match, otherwise return 0
+        if len(raw_words) != len(processed_words):
+            return 0
+
+        # Initialize counts
+        total_words = len(raw_words)
+        correct_restorations = 0
+
+        # Iterate through the words
+        for raw_word, proc_word in zip(raw_words, processed_words):
+            if raw_word == proc_word:
+                correct_restorations += 1  # Correctly restored word
+
+        # Calculate accuracy
+        if total_words == 0:
+            return 1.0  # Avoid division by zero; if no words, accuracy is perfect
+        score = correct_restorations / total_words
+        return score
+
+
+class Evaluators(Enum):
+    F1_SCORE_WORDS = F1ScoreWordsEvaluator()
+    F1_SCORE_CHARS = F1ScoreCharsEvaluator()
+    CHARACTER_ACCURACY = CharacterAccuracyEvaluator()
+    WORD_ACCURACY = WordAccuracyEvaluator()

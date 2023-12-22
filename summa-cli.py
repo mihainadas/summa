@@ -8,7 +8,13 @@ from summa.llms import (
     DeepInfra,
     MistralAI,
 )
-from summa.evals import f1_score_chars, f1_score_words, ca_score_chars, ca_score_words
+from summa.evals import (
+    Evaluators,
+    F1ScoreCharsEvaluator,
+    F1ScoreWordsEvaluator,
+    CharacterAccuracyEvaluator,
+    WordAccuracyEvaluator,
+)
 
 import concurrent.futures
 import logging
@@ -17,6 +23,8 @@ log = logging.getLogger(__name__)
 
 
 def eval(original_text, restored_outputs):
+    f1_chars = Evaluators.F1ScoreChars.evaluate
+
     sorted_outputs = sorted(
         restored_outputs,
         key=lambda o: (

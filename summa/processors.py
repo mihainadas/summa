@@ -12,11 +12,12 @@ class TextProcessor(ABC):
         model (TextGenerationModel): The text generation model used for text processing.
     """
 
-    def __init__(self, model: TextGenerationModel):
-        self.model = model
+    def __init__(self, name: str, description: str):
+        self.name = name
+        self.description = description
 
     @abstractmethod
-    def process(self, prompt: Prompt) -> ModelOutput:
+    def process(self, model: TextGenerationModel, prompt: Prompt) -> ModelOutput:
         pass
 
     def __str__(self) -> str:
@@ -28,16 +29,14 @@ class BasicTextProcessor(TextProcessor):
     A processor class for basic text generation using a specified model.
     """
 
-    def process(self, prompt):
-        return self.model.generate(prompt)
+    def __init__(self):
+        super().__init__(
+            "Basic Text Processor",
+            "A processor class for basic text generation using a specified model.",
+        )
 
-
-class RestoreDiacritics(BasicTextProcessor):
-    """
-    A processor class for restoring diacritics in text using a specified model.
-    """
-
-    pass
+    def process(self, model, prompt):
+        return model.generate(prompt)
 
 
 class TextProcessors(Enum):
@@ -45,5 +44,4 @@ class TextProcessors(Enum):
     An enum for the available text processors.
     """
 
-    BASIC = BasicTextProcessor
-    RESTORE_DIACRITICS = RestoreDiacritics
+    BASIC = BasicTextProcessor()

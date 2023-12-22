@@ -11,6 +11,7 @@ from .models_validators import datasource_validate_json
 from summa.llms import Models
 from summa.preprocessors import TextPreprocessors
 from summa.processors import TextProcessors
+from summa.evals import Evaluators
 
 logger = logging.getLogger(__name__)
 
@@ -83,13 +84,15 @@ class RawText(MD5TextModel):
 
 class TextPreprocessor(models.Model):
     name = models.CharField(
-        max_length=200, choices=[(v.name, v.name) for v in TextPreprocessors]
+        max_length=200,
+        choices=[(v.name, v.value.name) for v in TextPreprocessors],
+        unique=True,
     )
     description = models.TextField(editable=False)
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.description = TextPreprocessors[self.name].value.__doc__
+            self.description = TextPreprocessors[self.name].value.description
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -102,13 +105,15 @@ class TextPreprocessor(models.Model):
 
 class TextProcessor(models.Model):
     name = models.CharField(
-        max_length=200, choices=[(v.name, v.name) for v in TextProcessors]
+        max_length=200,
+        choices=[(v.name, v.value.name) for v in TextProcessors],
+        unique=True,
     )
     description = models.TextField(editable=False)
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.description = TextProcessors[self.name].value.__doc__
+            self.description = TextProcessors[self.name].value.description
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -117,11 +122,6 @@ class TextProcessor(models.Model):
     class Meta:
         verbose_name = "Text Processor"
         verbose_name_plural = "Text Processors"
-
-
-class PreprocessedText(TextModel):
-    preprocessor = models.ForeignKey(TextPreprocessor, on_delete=models.CASCADE)
-    input = models.ForeignKey(RawText, on_delete=models.CASCADE)
 
 
 def prompt_template_upload_path(instance, filename):
@@ -133,6 +133,7 @@ class PromptTemplate(MD5TextModel):
         upload_to=prompt_template_upload_path,
         verbose_name="Prompt Template File",
         help_text="Upload a prompt template file.",
+        unique=True,
     )
 
     def save(self, *args, **kwargs):
@@ -165,6 +166,28 @@ class LLM(models.Model):
         verbose_name = "LLM"
         verbose_name_plural = "LLMs"
         ordering = ["model", "version"]
+
+
+class Evaluator(models.Model):
+    name = models.CharField(
+        max_length=200,
+        choices=[(v.name, v.value.name) for v in Evaluators],
+        unique=True,
+    )
+    description = models.TextField(editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.description = Evaluators[self.name].value.description
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class PreprocessedText(TextModel):
+    preprocessor = models.ForeignKey(TextPreprocessor, on_delete=models.CASCADE)
+    input = models.ForeignKey(RawText, on_delete=models.CASCADE)
 
 
 class ProcessedText(TextModel):

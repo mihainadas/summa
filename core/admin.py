@@ -1,9 +1,13 @@
-from .admin_actions import datasource_importjson, datasource_slugify_name
+from .admin_actions import (
+    datasource_importjson,
+    datasource_slugify_name,
+)
 from django.contrib.admin import register, ModelAdmin
 from django.utils.safestring import mark_safe
 from .models import (
     JSONDataSource,
     LLM,
+    Evaluator,
     TextPreprocessor,
     TextProcessor,
     TextProcessingJob,
@@ -31,6 +35,12 @@ class LLMAdmin(ModelAdmin):
         "version",
     )
     readonly_fields = ("model",)
+
+
+@register(Evaluator)
+class EvaluatorAdmin(ModelAdmin):
+    list_display = ("name", "description")
+    list_filter = ("name",)
 
 
 @register(TextPreprocessor)
