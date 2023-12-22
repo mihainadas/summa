@@ -88,7 +88,7 @@ preprocessor = TextPreprocessors.STRIP_DIACRITICS.value
 processor = TextProcessors.BASIC.value
 llms = [
     Models.OPENAI_GPT_3_5_TURBO.value,
-    Models.OPENAI_GPT_4.value,
+    # Models.OPENAI_GPT_4.value,
     # Models.META_LLAMA_2_70B_CHAT_HF.value,
     # Models.META_LLAMA_2_7B_CHAT_HF.value,
     # Models.DEEPINFRA_AIROBOROS_70B.value,
@@ -108,15 +108,21 @@ evaluators = [
 ]
 
 runner = PipelineRunner(preprocessor, processor, llms, prompt_templates, evaluators)
-run_output = runner.run(raw_text)
 
-# print the results
-for i, o in enumerate(run_output.processed_outputs, start=1):
-    f1_chars = o.evaluator_outputs[0].score
-    f1_words = o.evaluator_outputs[1].score
-    ca_chars = o.evaluator_outputs[2].score
-    ca_words = o.evaluator_outputs[3].score
-    gen_time = o.generation_time
-    print(
-        f"{i:>2}. {o.model_version:<50} {o.prompt_template_filename:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}, ca_score_chars={ca_chars:.2f}, ca_score_words={ca_words:.2f}, gen_time={gen_time:.2f}"
-    )
+while True:
+    raw_text = input("Enter text: ")
+    if raw_text == "":
+        break
+
+    run_output = runner.run(raw_text)
+
+    # print the results
+    for i, o in enumerate(run_output.processed_outputs, start=1):
+        f1_chars = o.evaluator_outputs[0].score
+        f1_words = o.evaluator_outputs[1].score
+        ca_chars = o.evaluator_outputs[2].score
+        ca_words = o.evaluator_outputs[3].score
+        gen_time = o.generation_time
+        print(
+            f"{i:>2}. {o.model_version:<50} {o.prompt_template_filename:<50} {o.output:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}, ca_score_chars={ca_chars:.2f}, ca_score_words={ca_words:.2f}, gen_time={gen_time:.2f}"
+        )
