@@ -2,6 +2,23 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 
+class EvaluatorOutput:
+    """
+    Represents the output of an evaluator.
+    """
+
+    def __init__(self, evaluator: "Evaluator", score: float):
+        """
+        Initializes the evaluator output.
+
+        Args:
+            evaluator (Evaluator): The evaluator.
+            score (float): The score of the evaluator.
+        """
+        self.evaluator = evaluator
+        self.score = score
+
+
 class Evaluator(ABC):
     """
     Abstract base class for all evaluators.
@@ -19,16 +36,13 @@ class Evaluator(ABC):
         self.description = description
 
     @abstractmethod
-    def evaluate(self, raw_text: str, processed_text: str) -> float:
+    def evaluate(self, raw_text: str, processed_text: str) -> EvaluatorOutput:
         """
         Evaluates the restored text against the original text.
 
         Args:
             raw_text (str): The original text.
-            processed_text (str): The restored text.
-
-        Returns:
-            float: The score of the restoration.
+            processed_text (str): The processed text.
         """
         pass
 
@@ -73,8 +87,8 @@ class F1ScoreWordsEvaluator(Evaluator):
         Returns:
             float: The F1 score.
         """
-        raw_words = self.raw_text.split()
-        processed_words = self.processed_text.split()
+        raw_words = raw_text.split()
+        processed_words = processed_text.split()
 
         # Initialize counts
         TP = 0

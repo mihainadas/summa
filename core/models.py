@@ -205,7 +205,14 @@ class TextProcessingJob(models.Model):
     processor = models.ForeignKey(TextProcessor, on_delete=models.CASCADE)
     llms = models.ManyToManyField(LLM)
     prompt_templates = models.ManyToManyField(PromptTemplate)
+    evals = models.ManyToManyField(Evaluator)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def run(self):
+        pass
+
+    def __str__(self):
+        return f"Job #{self.id} - '{self.data_source.name}' ({self.created_at:%Y-%m-%d %H:%M:%S})"
 
 
 class TextProcessingJobRun(models.Model):

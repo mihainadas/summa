@@ -45,3 +45,8 @@ def datasource_slugify_name(modeladmin, request, queryset):
     for datasource in queryset:
         datasource.name = slugify(datasource.name).upper()
         datasource.save()
+
+
+def textprocessingjob_run(modeladmin, request, queryset):
+    for textprocessingjob in queryset:
+        textprocessingjob.run()

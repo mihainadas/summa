@@ -1,20 +1,8 @@
-from summa.processors import RestoreDiacritics
-from summa.llms import (
-    PromptTemplate,
-    Prompt,
-    ModelVersions,
-    OpenAI,
-    Meta,
-    DeepInfra,
-    MistralAI,
-)
-from summa.evals import (
-    Evaluators,
-    F1ScoreCharsEvaluator,
-    F1ScoreWordsEvaluator,
-    CharacterAccuracyEvaluator,
-    WordAccuracyEvaluator,
-)
+from summa.preprocessors import TextPreprocessors
+from summa.processors import TextProcessors
+from summa.llms import Models, Prompt, PromptTemplate
+from summa.evals import Evaluators
+from summa.pipelines import PipelineRunner, PipelineRunOutput
 
 import concurrent.futures
 import logging
@@ -23,7 +11,10 @@ log = logging.getLogger(__name__)
 
 
 def eval(original_text, restored_outputs):
-    f1_chars = Evaluators.F1ScoreChars.evaluate
+    f1_score_chars = Evaluators.F1_SCORE_CHARS.value.evaluate
+    f1_score_words = Evaluators.F1_SCORE_WORDS.value.evaluate
+    ca_score_chars = Evaluators.CHARACTER_ACCURACY.value.evaluate
+    ca_score_words = Evaluators.WORD_ACCURACY.value.evaluate
 
     sorted_outputs = sorted(
         restored_outputs,
@@ -47,20 +38,20 @@ def eval(original_text, restored_outputs):
 
 # Modify the restore_diacritics function to accept model and prompt_template as arguments
 def restore_diacritics(model, prompt_template, input):
-    rd = RestoreDiacritics(model)
-    output = rd.process(Prompt(prompt_template, input))
+    rd = TextProcessors.BASIC.value
+    output = rd.process(model, Prompt(prompt_template, input))
     return output
 
 
 def run_restore_diacritics(input):
     restored_outputs = []
     models = [
-        OpenAI(model_version=ModelVersions.OPENAI_GPT_3_5_TURBO),
-        OpenAI(model_version=ModelVersions.OPENAI_GPT_4),
-        Meta(model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF),
-        Meta(model_version=ModelVersions.META_LLAMA_2_7B_CHAT_HF),
-        DeepInfra(model_version=ModelVersions.DEEPINFRA_AIROBOROS_70B),
-        MistralAI(model_version=ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1),
+        Models.OPENAI_GPT_3_5_TURBO.value,
+        Models.OPENAI_GPT_4.value,
+        Models.META_LLAMA_2_70B_CHAT_HF.value,
+        Models.META_LLAMA_2_7B_CHAT_HF.value,
+        Models.DEEPINFRA_AIROBOROS_70B.value,
+        Models.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
     ]
 
     prompt_templates = [
@@ -86,9 +77,46 @@ def run_restore_diacritics(input):
     return restored_outputs
 
 
-original_text = (
-    "Mâine, când răsare soarele, voi mânca un măr și voi înghiți apă sifonată."
+raw_text = "Mâine, când răsare soarele, voi mânca un măr și voi înghiți apă sifonată."
+preprocessed_text = (
+    "Maine, cand rasare soarele, voi manca un mar si voi inghiti apa sifonata."
 )
-input_text = "Maine, cand rasare soarele, voi manca un mar si voi inghiti apa sifonata."
 
-eval(original_text, run_restore_diacritics(input_text))
+# eval(raw_text, run_restore_diacritics(preprocessed_text))
+
+preprocessor = TextPreprocessors.STRIP_DIACRITICS.value
+processor = TextProcessors.BASIC.value
+llms = [
+    Models.OPENAI_GPT_3_5_TURBO.value,
+    Models.OPENAI_GPT_4.value,
+    # Models.META_LLAMA_2_70B_CHAT_HF.value,
+    # Models.META_LLAMA_2_7B_CHAT_HF.value,
+    # Models.DEEPINFRA_AIROBOROS_70B.value,
+    # Models.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
+]
+prompt_templates = [
+    PromptTemplate(template_filename="restore_diacritics.md"),
+    PromptTemplate(template_filename="restore_diacritics_verbose.md"),
+    PromptTemplate(template_filename="restore_diacritics_verbose_1s.md"),
+    PromptTemplate(template_filename="restore_diacritics_verbose_2s.md"),
+]
+evaluators = [
+    Evaluators.F1_SCORE_CHARS.value,
+    Evaluators.F1_SCORE_WORDS.value,
+    Evaluators.CHARACTER_ACCURACY.value,
+    Evaluators.WORD_ACCURACY.value,
+]
+
+runner = PipelineRunner(preprocessor, processor, llms, prompt_templates, evaluators)
+run_output = runner.run(raw_text)
+
+# print the results
+for i, o in enumerate(run_output.processed_outputs, start=1):
+    f1_chars = o.evaluator_outputs[0].score
+    f1_words = o.evaluator_outputs[1].score
+    ca_chars = o.evaluator_outputs[2].score
+    ca_words = o.evaluator_outputs[3].score
+    gen_time = o.generation_time
+    print(
+        f"{i:>2}. {o.model_version:<50} {o.prompt_template_filename:<50} f1_chars={f1_chars:.2f}, f1_words={f1_words:.2f}, ca_score_chars={ca_chars:.2f}, ca_score_words={ca_words:.2f}, gen_time={gen_time:.2f}"
+    )
