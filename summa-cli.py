@@ -103,7 +103,7 @@ prompt_templates = [
     PromptTemplate(template_filename="restore_diacritics_verbose_2s.md"),
 ]
 evaluators = [
-    Evaluators.F1_SCORE_WORDS.value,
+    # Evaluators.F1_SCORE_WORDS.value,
     Evaluators.F1_SCORE_WORDS_CASE_INSENSITIVE.value,
 ]
 
@@ -114,7 +114,7 @@ json_dlrlc = "data/dexonline/dlrlc/json/dexonline_dlrlc_10.json"
 json_crawler = "data/dexonline/crawler/json/dexonline_crawler_10.json"
 with open(json_crawler, "r") as f:
     json_data = json.load(f)
-    raw_texts = [d["text"] for d in json_data][:3]
+    raw_texts = [d["text"] for d in json_data]
 
 run_outputs = []
 for raw_text in raw_texts:
