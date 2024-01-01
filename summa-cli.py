@@ -2,7 +2,7 @@ import json
 import os
 from summa.preprocessors import TextPreprocessors
 from summa.processors import TextProcessors
-from summa.llms import Models, Prompt, PromptTemplate
+from summa.llms import TextGenerationLLMs, Prompt, PromptTemplate
 from summa.evals import Evaluators
 from summa.pipelines import PipelineRunner, PipelineRunOutput
 
@@ -48,12 +48,13 @@ def restore_diacritics(model, prompt_template, input):
 def run_restore_diacritics(input):
     restored_outputs = []
     models = [
-        Models.OPENAI_GPT_3_5_TURBO.value,
-        Models.OPENAI_GPT_4.value,
-        Models.META_LLAMA_2_70B_CHAT_HF.value,
-        Models.META_LLAMA_2_7B_CHAT_HF.value,
-        Models.DEEPINFRA_AIROBOROS_70B.value,
-        Models.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
+        TextGenerationLLMs.OPENAI_GPT_3_5_TURBO.value,
+        TextGenerationLLMs.OPENAI_GPT_4.value,
+        TextGenerationLLMs.OPENAI_GPT_4_TURBO.value,
+        TextGenerationLLMs.META_LLAMA_2_70B_CHAT_HF.value,
+        TextGenerationLLMs.META_LLAMA_2_7B_CHAT_HF.value,
+        TextGenerationLLMs.DEEPINFRA_AIROBOROS_70B.value,
+        TextGenerationLLMs.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
     ]
 
     prompt_templates = [
@@ -89,11 +90,12 @@ preprocessed_text = (
 preprocessor = TextPreprocessors.STRIP_DIACRITICS.value
 processor = TextProcessors.BASIC.value
 llms = [
-    Models.OPENAI_GPT_3_5_TURBO.value,
-    Models.OPENAI_GPT_4.value,
+    TextGenerationLLMs.OPENAI_GPT_3_5_TURBO.value,
+    TextGenerationLLMs.OPENAI_GPT_4.value,
+    TextGenerationLLMs.OPENAI_GPT_4_TURBO.value,
     # Models.META_LLAMA_2_70B_CHAT_HF.value,
     # Models.META_LLAMA_2_7B_CHAT_HF.value,
-    Models.DEEPINFRA_AIROBOROS_70B.value,
+    TextGenerationLLMs.DEEPINFRA_AIROBOROS_70B.value,
     # Models.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1.value,
 ]
 prompt_templates = [
@@ -129,4 +131,4 @@ for run_output in run_outputs:
     for output in run_output.processed_outputs:
         model_scores.setdefault(output.model_version, []).append(output.evals[0].score)
 for model_version, scores in model_scores.items():
-    print(f"{model_version}: {sum(scores) / len(scores):.2f}")
+    print(f"{model_version}: {sum(scores) / len(scores):.4f}")

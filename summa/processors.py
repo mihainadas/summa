@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Any
-from .llms import TextGenerationModel, ModelOutput, Prompt
+from .llms import TextGenerationLLM, TextGenerationOutput, Prompt
 from abc import ABC, abstractmethod
 
 
@@ -17,7 +17,7 @@ class TextProcessor(ABC):
         self.description = description
 
     @abstractmethod
-    def process(self, model: TextGenerationModel, prompt: Prompt) -> ModelOutput:
+    def process(self, model: TextGenerationLLM, prompt: Prompt) -> TextGenerationOutput:
         pass
 
     def __str__(self) -> str:

@@ -2,7 +2,7 @@ from typing import List
 import concurrent.futures
 from .preprocessors import TextPreprocessor
 from .processors import TextProcessor
-from .llms import TextGenerationModel, ModelOutput, PromptTemplate, Prompt
+from .llms import TextGenerationLLM, TextGenerationOutput, PromptTemplate, Prompt
 from .evals import Evaluator, EvaluatorOutput
 
 
@@ -10,10 +10,12 @@ class PipelineRunOutput:
     def __init__(
         self,
         raw_text: str,
+        preprocessor: TextPreprocessor,
         preprocessed_text: str,
-        processed_outputs: List[ModelOutput],
+        processed_outputs: List[TextGenerationOutput],
     ):
         self.raw_text = raw_text
+        self.preprocessor = preprocessor
         self.preprocessed_text = preprocessed_text
         self.processed_outputs = processed_outputs
 
@@ -32,7 +34,7 @@ class PipelineRunner:
         self,
         preprocessor: TextPreprocessor,
         processor: TextProcessor,
-        llms: List[TextGenerationModel],
+        llms: List[TextGenerationLLM],
         prompt_templates: List[PromptTemplate],
         evaluators: List[Evaluator],
     ):
@@ -45,7 +47,7 @@ class PipelineRunner:
     def _preprocess(self, raw_text: str) -> str:
         return self.preprocessor.preprocess(raw_text)
 
-    def _process(self, preprocessed_text: str) -> List[ModelOutput]:
+    def _process(self, preprocessed_text: str) -> List[TextGenerationOutput]:
         processed_outputs = []
         for model in self.llms:
             for prompt_template in self.prompt_templates:
@@ -53,7 +55,7 @@ class PipelineRunner:
                 processed_outputs.append(self.processor.process(model, prompt))
         return processed_outputs
 
-    def _process_parallel(self, preprocessed_text: str) -> List[ModelOutput]:
+    def _process_parallel(self, preprocessed_text: str) -> List[TextGenerationOutput]:
         processed_outputs = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Submit process tasks to the executor
@@ -71,8 +73,8 @@ class PipelineRunner:
         return processed_outputs
 
     def _evaluate(
-        self, raw_text: str, processed_outputs: List[ModelOutput]
-    ) -> List[EvaluatorOutput]:
+        self, raw_text: str, processed_outputs: List[TextGenerationOutput]
+    ) -> None:
         for output in processed_outputs:
             evaluated_outputs = []
             for evaluator in self.evaluators:
@@ -88,5 +90,7 @@ class PipelineRunner:
             processed_outputs = self._process(preprocessed_text)
         else:
             processed_outputs = self._process_parallel(preprocessed_text)
-        evaluated_outputs = self._evaluate(raw_text, processed_outputs)
-        return PipelineRunOutput(raw_text, preprocessed_text, processed_outputs)
+        self._evaluate(raw_text, processed_outputs)
+        return PipelineRunOutput(
+            raw_text, self.preprocessor, preprocessed_text, processed_outputs
+        )

@@ -109,7 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Bucharest"
 
 USE_I18N = True
 
@@ -159,7 +159,7 @@ LOGGING = {
             "formatter": "simple",
         },
         "file": {
-            "level": "DEBUG",
+            "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "maxBytes": 1024 * 1024 * 5,  # 5 MB
             "backupCount": 10,  # Keep 5 backup files
@@ -170,7 +170,12 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console", "file"],
-            "level": "ERROR",
+            "level": "INFO",
+            "propagate": True,
+        },
+        "core": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
             "propagate": True,
         },
         "glife": {

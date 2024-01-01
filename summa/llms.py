@@ -101,25 +101,26 @@ class ModelVersions(Enum):
 
     OPENAI_GPT_3_5_TURBO = "gpt-3.5-turbo"
     OPENAI_GPT_4 = "gpt-4"
+    OPENAI_GPT_4_TURBO = "gpt-4-1106-preview"
     META_LLAMA_2_70B_CHAT_HF = "meta-llama/Llama-2-70b-chat-hf"
     META_LLAMA_2_7B_CHAT_HF = "meta-llama/Llama-2-7b-chat-hf"
     DEEPINFRA_AIROBOROS_70B = "deepinfra/airoboros-70b"
     MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
 
-class TextGenerationModel(ABC):
+class TextGenerationLLM(ABC):
     def __init__(self, model, model_version: ModelVersions):
         self.model = model
         self.model_version = model_version.value
 
     @abstractmethod
-    def generate(self, prompt: Prompt) -> "ModelOutput":
+    def generate(self, prompt: Prompt) -> "TextGenerationOutput":
         pass
 
 
-class ModelOutput:
+class TextGenerationOutput:
     def __init__(
-        self, model: TextGenerationModel, model_version: ModelVersions, prompt: Prompt
+        self, model: TextGenerationLLM, model_version: ModelVersions, prompt: Prompt
     ):
         self.model = model
         self.model_version = model_version
@@ -140,7 +141,7 @@ class ModelOutput:
         self.generation_time = time.time() - self._generation_time_start
 
 
-class OpenAIClient(TextGenerationModel):
+class OpenAIClient(TextGenerationLLM):
     def __init__(self, model, model_version, api_key, base_url=None):
         if base_url is None:
             self.client = openai.OpenAI(api_key=api_key)
@@ -150,7 +151,7 @@ class OpenAIClient(TextGenerationModel):
 
     def generate(self, prompt):
         try:
-            output = ModelOutput(
+            output = TextGenerationOutput(
                 model=self.model, model_version=self.model_version, prompt=prompt
             )
             # Generate text using the OpenAI chat completions API
@@ -203,9 +204,10 @@ class MistralAI(DeepInfraClient):
         super().__init__("MistralAI", model_version)
 
 
-class Models(Enum):
+class TextGenerationLLMs(Enum):
     OPENAI_GPT_3_5_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_3_5_TURBO)
     OPENAI_GPT_4 = OpenAI(model_version=ModelVersions.OPENAI_GPT_4)
+    OPENAI_GPT_4_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_4_TURBO)
     META_LLAMA_2_70B_CHAT_HF = Meta(
         model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF
     )

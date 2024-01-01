@@ -47,6 +47,7 @@ def datasource_slugify_name(modeladmin, request, queryset):
         datasource.save()
 
 
+@admin.action(description="Run selected %(verbose_name_plural)s")
 def textprocessingjob_run(modeladmin, request, queryset):
     for textprocessingjob in queryset:
         textprocessingjob.run()
