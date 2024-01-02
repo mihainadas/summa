@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def _upload_path(instance, filename, prefix):
     base, extension = os.path.splitext(filename)
-    timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = timezone.now().strftime("%y%m%d_%H%M")
     adjusted_filename = f"{slugify(base)}-{timestamp}{extension}"
     module_name = instance.__class__.__module__.split(".")[0]
     return "{0}/{1}/{2}".format(module_name, prefix, adjusted_filename)
@@ -32,8 +32,8 @@ class TextModel(models.Model):
     text = models.TextField(editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{short_text(self.text)}"
+    def __str__(self) -> str:
+        return self.text
 
     class Meta:
         abstract = True
@@ -52,9 +52,6 @@ class MD5TextModel(TextModel):
             raise django.core.exceptions.ValidationError(
                 f'Duplicate text found in data source: "{self.text}"'
             )
-
-    def __str__(self):
-        return f"{short_text(self.text)}"
 
     class Meta:
         abstract = True
@@ -166,7 +163,7 @@ class PromptTemplate(MD5TextModel):
         return summa.llms.PromptTemplate(template_filename=self.file.path)
 
     def __str__(self):
-        return f"{self.file.name}"
+        return f"{os.path.basename(self.file.name)}"
 
     class Meta:
         ordering = ["id"]

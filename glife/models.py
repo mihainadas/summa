@@ -28,6 +28,13 @@ class RestorationJobRun(TextProcessingJobRun):
         verbose_name_plural = "Restoration Job Runs"
 
 
+class RestorationJobRunOutput(TextProcessingOutput):
+    class Meta:
+        proxy = True
+        verbose_name = "Restoration Job Run Output"
+        verbose_name_plural = "Restoration Job Run Outputs"
+
+
 class RestorationOutput(TextProcessingOutput):
     class Meta:
         proxy = True

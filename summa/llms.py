@@ -172,7 +172,7 @@ class OpenAIClient(TextGenerationLLM):
 
 class DeepInfraClient(OpenAIClient):
     def __init__(self, model, model_version):
-        api_key = config("DEEPINFRA_API_KEY")
+        api_key = config("DEEPINFRA_API_KEY", default="None")
         super().__init__(
             model,
             model_version,
@@ -183,7 +183,7 @@ class DeepInfraClient(OpenAIClient):
 
 class OpenAI(OpenAIClient):
     def __init__(self, model_version=ModelVersions.OPENAI_GPT_3_5_TURBO):
-        api_key = config("OPENAI_API_KEY")
+        api_key = config("OPENAI_API_KEY", default="None")
         super().__init__("OpenAI", model_version, api_key)
 
 

@@ -1,8 +1,10 @@
 from django.contrib import admin
+from django.contrib.admin.sites import AdminSite
 from .models import (
     RestorationPromptTemplate,
     RestorationJob,
     RestorationJobRun,
+    RestorationJobRunOutput,
     RestorationOutput,
 )
 from django.contrib.admin import register, ModelAdmin
