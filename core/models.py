@@ -40,9 +40,7 @@ class TextModel(models.Model):
 
 
 class MD5TextModel(TextModel):
-    text_md5 = models.CharField(
-        max_length=32, unique=True, editable=False, verbose_name="MD5 hash"
-    )
+    text_md5 = models.CharField(max_length=32, editable=False, verbose_name="MD5 hash")
 
     def save(self, *args, **kwargs):
         self.text_md5 = md5(self.text)
@@ -328,70 +326,6 @@ class TextProcessingJob(models.Model):
     prompt_templates = models.ManyToManyField(PromptTemplate)
     evaluators = models.ManyToManyField(Evaluator)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    @transaction.atomic
-    def _save_output(self, run: TextProcessingJobRun, output: PipelineRunOutput):
-        raw_text, _ = RawText.objects.get_or_create(
-            data_source=self.data_source, text=output.raw_text
-        )
-        run_output = TextProcessingJobRunOutput.objects.create(
-            run=run,
-            raw_text=raw_text,
-            preprocessed_text=PreprocessedText.objects.create(
-                preprocessor=self.preprocessor,
-                input=raw_text,
-                text=output.preprocessed_text,
-            ),
-        )
-        for processed_output in output.processed_outputs:
-            processing_output = TextProcessingOutput.objects.create(
-                run_output=run_output,
-                llm=self.llms.get(
-                    version=ModelVersions(processed_output.model_version).name
-                ),
-                prompt_template=self.prompt_templates.get(
-                    text=processed_output.prompt_template
-                ),
-                prompt=processed_output.prompt,
-                output=processed_output.output,
-                generation_time=processed_output.generation_time,
-            )
-            for evaluator_output in processed_output.evals:
-                TextProcessingEvaluatorOutput.objects.create(
-                    processing_output=processing_output,
-                    evaluator=self.evaluators.get(
-                        name=Evaluators(evaluator_output.evaluator).name
-                    ),
-                    score=evaluator_output.score,
-                )
-
-    def run(self):
-        job_run = TextProcessingJobRun.objects.create(job=self)
-
-        preprocessor = self.preprocessor.instance
-        processor = self.processor.instance
-        llms = [llm.instance for llm in self.llms.all()]
-        prompt_templates = [pt.instance for pt in self.prompt_templates.all()]
-        evaluators = [eval.instance for eval in self.evaluators.all()]
-        raw_texts = self.data_source.texts
-
-        pipeline_runner = PipelineRunner(
-            preprocessor, processor, llms, prompt_templates, evaluators
-        )
-
-        job_run.set_start()
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(pipeline_runner.run, raw_text) for raw_text in raw_texts
-            ]
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    self._save_output(job_run, future.result())
-                except Exception as e:
-                    logger.error(e, exc_info=True)
-
-        job_run.set_finish()
 
     def create_run(self):
         job_run = TextProcessingJobRun.objects.create(job=self)
