@@ -14,7 +14,6 @@ from core.admin import (
     TextProcessingJobRunAdmin,
     TextProcessingOutputAdmin,
 )
-from core.admin_actions import datasource_importjson
 
 
 @register(RestorationPromptTemplate)

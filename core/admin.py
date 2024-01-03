@@ -1,6 +1,5 @@
 from django.contrib.admin.sites import AdminSite
 from .admin_actions import (
-    datasource_importjson,
     datasource_slugify_name,
     textprocessingjob_run,
 )
@@ -30,7 +29,7 @@ class DataSourceAdmin(ModelAdmin):
         "file",
     )
     list_filter = ("name",)
-    actions = [datasource_importjson, datasource_slugify_name]
+    actions = [datasource_slugify_name]
 
 
 @register(LLM)

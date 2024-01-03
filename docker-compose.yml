@@ -1,4 +1,3 @@
-version: '0.1'
 services:
   galandriel-db:
     image: postgres:latest
@@ -22,7 +21,7 @@ services:
     env_file:
       - .env
     volumes:
-      - galandriel-app-data:/summa
+      - galandriel-app-media:/summa/galandriel/media
     depends_on:
       galandriel-db:
         condition: service_healthy
@@ -51,5 +50,5 @@ services:
       - metabase-db
 volumes:
   galandriel-db-data:
-  galandriel-app-data:
+  galandriel-app-media:
   metabase-db-data:

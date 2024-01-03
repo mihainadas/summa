@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "background_task",  # added for background tasks
     "galandriel.apps.MyAdminConfig",  # replaced 'django.contrib.admin' with custom admin site
     "core",
     "glife",

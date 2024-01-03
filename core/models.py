@@ -257,6 +257,68 @@ class TextProcessingJobRun(models.Model):
         self.finished_at = timezone.now()
         self.save()
 
+    @transaction.atomic
+    def _save_output(self, job: "TextProcessingJob", output: PipelineRunOutput):
+        raw_text, _ = RawText.objects.get_or_create(
+            data_source=job.data_source, text=output.raw_text
+        )
+        run_output = TextProcessingJobRunOutput.objects.create(
+            run=self,
+            raw_text=raw_text,
+            preprocessed_text=PreprocessedText.objects.create(
+                preprocessor=job.preprocessor,
+                input=raw_text,
+                text=output.preprocessed_text,
+            ),
+        )
+        for processed_output in output.processed_outputs:
+            processing_output = TextProcessingOutput.objects.create(
+                run_output=run_output,
+                llm=job.llms.get(
+                    version=ModelVersions(processed_output.model_version).name
+                ),
+                prompt_template=job.prompt_templates.get(
+                    text=processed_output.prompt_template
+                ),
+                prompt=processed_output.prompt,
+                output=processed_output.output,
+                generation_time=processed_output.generation_time,
+            )
+            for evaluator_output in processed_output.evals:
+                TextProcessingEvaluatorOutput.objects.create(
+                    processing_output=processing_output,
+                    evaluator=job.evaluators.get(
+                        name=Evaluators(evaluator_output.evaluator).name
+                    ),
+                    score=evaluator_output.score,
+                )
+
+    def run(self):
+        preprocessor = self.job.preprocessor.instance
+        processor = self.job.processor.instance
+        llms = [llm.instance for llm in self.job.llms.all()]
+        prompt_templates = [pt.instance for pt in self.job.prompt_templates.all()]
+        evaluators = [eval.instance for eval in self.job.evaluators.all()]
+        raw_texts = self.job.data_source.texts
+
+        pipeline_runner = PipelineRunner(
+            preprocessor, processor, llms, prompt_templates, evaluators
+        )
+
+        self.set_start()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(pipeline_runner.run, raw_text) for raw_text in raw_texts
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    self._save_output(self.job, future.result())
+                except Exception as e:
+                    logger.error(e, exc_info=True)
+
+        self.set_finish()
+
 
 class TextProcessingJob(models.Model):
     data_source = models.ForeignKey(JSONDataSource, on_delete=models.CASCADE)
@@ -330,6 +392,10 @@ class TextProcessingJob(models.Model):
                     logger.error(e, exc_info=True)
 
         job_run.set_finish()
+
+    def create_run(self):
+        job_run = TextProcessingJobRun.objects.create(job=self)
+        return job_run.id
 
     def __str__(self):
         return f"Job #{self.id} - '{self.data_source.name}' ({self.created_at:%Y-%m-%d %H:%M:%S})"
