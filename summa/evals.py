@@ -216,7 +216,8 @@ class RestorationErrorRateEvaluator(RestorationEvaluator):
         distance = RestorationErrorRateEvaluator.levenshtein_distance(
             original_text, restored_text
         )
-        return distance / len(original_text)
+        # using min to avoid supra-unitary values
+        return min(distance / len(original_text), 1)
 
     @staticmethod
     def calculate_wer(original_text, restored_text):
@@ -225,7 +226,8 @@ class RestorationErrorRateEvaluator(RestorationEvaluator):
         distance = RestorationErrorRateEvaluator.levenshtein_distance(
             original_words, restored_words
         )
-        return distance / len(original_words)
+        # using min to avoid supra-unitary values
+        return min(distance / len(original_words), 1)
 
     def evaluate(self, raw_text: str, processed_text: str) -> EvaluatorOutput:
         (raw_text, processed_text) = self.adjust_inputs(raw_text, processed_text)
@@ -254,10 +256,10 @@ class Evaluators(Enum):
         case_sensitive=True, strip_padding=True, word_level=False
     )
     RER_CI_CL = RestorationErrorRateEvaluator(
-        case_sensitive=False, strip_padding=True, word_level=True
+        case_sensitive=False, strip_padding=True, word_level=False
     )
     RER_CS_WL = RestorationErrorRateEvaluator(
-        case_sensitive=True, strip_padding=True, word_level=False
+        case_sensitive=True, strip_padding=True, word_level=True
     )
     RER_CI_WL = RestorationErrorRateEvaluator(
         case_sensitive=False, strip_padding=True, word_level=True

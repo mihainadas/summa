@@ -133,53 +133,153 @@ Restoration Error Rate: Evaluator for calculating the error rate of a restoratio
 """
 
 
+# Case Sensitive, Character Level
 class TestRestorationErrorRateEvaluator_CS_CL(unittest.TestCase):
     def setUp(self) -> None:
         self.eval = Evaluators.RER_CS_CL.value
-        self.raw_text = "S-au împlinit de curând, pe 2 iunie, 201 ani de la nașterea lui C.A. Rosetti. Un bicentenar și-un an."
         return super().setUp()
 
-    def test_base_case(self):
-        processed_text = self.raw_text
-        expected_result = 1.0
-        result = self.eval.evaluate(self.raw_text, processed_text)
+    def test_echo(self):
+        processed_text = RAW_TEXT_WORD
+        expected_result = 1.0  # this should be 1.0 because the two texts are identical
+        result = self.eval.evaluate(RAW_TEXT_WORD, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_unequal_lengths_d1(self):
+        processed_text = "ransfăgărășan"
+        expected_result = (
+            1 - 1 / RAW_TEXT_WORD_LEN
+        )  # the levenstein distance is 1, so 1/14 = 0.07, and reversed is 1 - 0.07 = 0.93
+        result = self.eval.evaluate(RAW_TEXT_WORD, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_unequal_lengths_d2(self):
+        processed_text = "Transfăgărășanul"
+        expected_result = (
+            1 - 2 / RAW_TEXT_WORD_LEN
+        )  # the levenshtein distance is 2, so 2/14 = 0.14, and reversed is 1 - 0.14 = 0.86
+        result = self.eval.evaluate(RAW_TEXT_WORD, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_equal_lengths_d1(self):
+        processed_text = "Transfagărășan"
+        expected_result = (
+            1 - 1 / RAW_TEXT_WORD_LEN
+        )  # the levenshtein distance is 2, so 2/14 = 0.14, and reversed is 1 - 0.14 = 0.86
+        result = self.eval.evaluate(RAW_TEXT_WORD, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_equal_lengths_d2(self):
+        processed_text = "Transfagarășan"
+        expected_result = (
+            1 - 2 / RAW_TEXT_WORD_LEN
+        )  # the levenshtein distance is 2, so 2/14 = 0.14, and reversed is 1 - 0.14 = 0.86
+        result = self.eval.evaluate(RAW_TEXT_WORD, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_unequal_lengths_dhigh(self):
+        processed_text = RAW_TEXT_WORD * 100
+        expected_result = 0.0  # this should be 0.0 because the two texts have significantly different lengths
+        result = self.eval.evaluate(RAW_TEXT_WORD, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_case_sensitivity(self):
+        raw_text_upper = RAW_TEXT_WORD.upper()
+        processed_text = RAW_TEXT_WORD.lower()
+        expected_result = (
+            0.0  # this should be 0.0 because the case sensitivity is enabled
+        )
+        result = self.eval.evaluate(raw_text_upper, processed_text)
         self.assertEqual(result, expected_result)
 
 
+# Case Insensitive, Character Level
 class TestRestorationErrorRateEvaluator_CI_CL(unittest.TestCase):
     def setUp(self) -> None:
         self.eval = Evaluators.RER_CI_CL.value
-        self.raw_text = "S-au împlinit de curând, pe 2 iunie, 201 ani de la nașterea lui C.A. Rosetti. Un bicentenar și-un an."
         return super().setUp()
 
-    def test_base_case(self):
-        processed_text = self.raw_text
-        expected_result = 1.0
-        result = self.eval.evaluate(self.raw_text, processed_text)
+    def test_case_sensitivity(self):
+        raw_text_upper = RAW_TEXT_WORD.upper()
+        processed_text = RAW_TEXT_WORD.lower()
+        expected_result = (
+            1.0  # this should be 1.0 because the case sensitivity is ignored
+        )
+        result = self.eval.evaluate(raw_text_upper, processed_text)
         self.assertEqual(result, expected_result)
 
 
+# Case Sensitive, Word Level
 class TestRestorationErrorRateEvaluator_CS_WL(unittest.TestCase):
     def setUp(self) -> None:
         self.eval = Evaluators.RER_CS_WL.value
-        self.raw_text = "S-au împlinit de curând, pe 2 iunie, 201 ani de la nașterea lui C.A. Rosetti. Un bicentenar și-un an."
         return super().setUp()
 
-    def test_base_case(self):
-        processed_text = self.raw_text
-        expected_result = 1.0
-        result = self.eval.evaluate(self.raw_text, processed_text)
+    def test_echo(self):
+        processed_text = RAW_TEXT_WORDS
+        expected_result = 1.0  # this should be 1.0 because the two texts are identical
+        result = self.eval.evaluate(RAW_TEXT_WORDS, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_unequal_lengths_d1(self):
+        processed_text = "Transfăgărășanul s-a închis pentru această iarnă"
+        expected_result = (
+            1 - 1 / RAW_TEXT_WORDS_COUNT
+        )  # the levenstein distance is 1 (one word needs to be deleted)
+        result = self.eval.evaluate(RAW_TEXT_WORDS, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_unequal_lengths_d2(self):
+        processed_text = "Transfăgărășanul s-a închis pentru această iarnă grea"
+        expected_result = (
+            1 - 2 / RAW_TEXT_WORDS_COUNT
+        )  # the levenstein distance is 2 (two words need to be deleted)
+        result = self.eval.evaluate(RAW_TEXT_WORDS, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_unequal_lengths_dhigh(self):
+        processed_text = RAW_TEXT_WORDS * 100
+        expected_result = (
+            0.0  # this should be 0.0 because the two texts have different word lengths
+        )
+        result = self.eval.evaluate(RAW_TEXT_WORDS, processed_text)
+
+    def test_equal_lengths_d1(self):
+        processed_text = "Transfagărășanul s-a închis pentru iarnă"  # missed one diacratic in the first word
+        expected_result = (
+            1 - 1 / RAW_TEXT_WORDS_COUNT
+        )  # the levenstein distance is 1 (one word needs to be deleted)
+        result = self.eval.evaluate(RAW_TEXT_WORDS, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_equal_lengths_d2(self):
+        processed_text = "Transfagărășanul s-a inchis pentru iarnă"  # missed one diacratic in the first word, and one in the third word
+        expected_result = (
+            1 - 2 / RAW_TEXT_WORDS_COUNT
+        )  # the levenstein distance is 1 (one word needs to be deleted)
+        result = self.eval.evaluate(RAW_TEXT_WORDS, processed_text)
+        self.assertEqual(result, expected_result)
+
+    def test_case_sensitivity(self):
+        raw_text_upper = RAW_TEXT_WORD.upper()
+        processed_text = RAW_TEXT_WORD.lower()
+        expected_result = (
+            0.0  # this should be 0.0 because the case sensitivity is enabled
+        )
+        result = self.eval.evaluate(raw_text_upper, processed_text)
         self.assertEqual(result, expected_result)
 
 
 class TestRestorationErrorRateEvaluator_CI_WL(unittest.TestCase):
     def setUp(self) -> None:
         self.eval = Evaluators.RER_CI_WL.value
-        self.raw_text = "S-au împlinit de curând, pe 2 iunie, 201 ani de la nașterea lui C.A. Rosetti. Un bicentenar și-un an."
         return super().setUp()
 
-    def test_base_case(self):
-        processed_text = self.raw_text
-        expected_result = 1.0
-        result = self.eval.evaluate(self.raw_text, processed_text)
+    def test_case_sensitivity(self):
+        raw_text_upper = RAW_TEXT_WORD.upper()
+        processed_text = RAW_TEXT_WORD.lower()
+        expected_result = (
+            1.0  # this should be 0.0 because the case sensitivity is enabled
+        )
+        result = self.eval.evaluate(raw_text_upper, processed_text)
         self.assertEqual(result, expected_result)

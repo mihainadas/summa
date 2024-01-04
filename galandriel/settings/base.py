@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # "csp.middleware.CSPMiddleware",  # added for Content Security Policy
     "whitenoise.middleware.WhiteNoiseMiddleware",  # added to serve static files in production without a separate server
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -186,3 +187,6 @@ LOGGING = {
         },
     },
 }
+
+# Content Security Policy
+# CSP_DEFAULT_SRC = ("'self'", "https://cdn.jsdeliver.net")

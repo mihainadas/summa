@@ -217,18 +217,9 @@ class Evaluator(models.Model):
         return self.name
 
 
-class PreprocessedText(TextModel):
+class PreprocessedText(MD5TextModel):
     preprocessor = models.ForeignKey(TextPreprocessor, on_delete=models.CASCADE)
     input = models.ForeignKey(RawText, on_delete=models.CASCADE)
-
-
-class ProcessedText(TextModel):
-    processor = models.ForeignKey(TextProcessor, on_delete=models.CASCADE)
-    input = models.ForeignKey(PreprocessedText, on_delete=models.CASCADE)
-    llm = models.ForeignKey(LLM, on_delete=models.CASCADE)
-    prompt_template = models.ForeignKey(PromptTemplate, on_delete=models.CASCADE)
-    prompt = models.TextField()
-    generation_time = models.FloatField()
 
 
 class TextProcessingJobRun(models.Model):
@@ -252,17 +243,19 @@ class TextProcessingJobRun(models.Model):
 
     @transaction.atomic
     def _save_output(self, job: "TextProcessingJob", output: PipelineRunOutput):
-        raw_text, _ = RawText.objects.get_or_create(
-            data_source=job.data_source, text_md5=md5(output.raw_text)
+        raw_text, created = RawText.objects.get_or_create(
+            data_source=job.data_source,
+            text_md5=md5(output.raw_text),
+            defaults={"text": output.raw_text},
+        )
+        preprocessed_text, created = PreprocessedText.objects.get_or_create(
+            preprocessor=job.preprocessor,
+            input=raw_text,
+            text_md5=md5(output.preprocessed_text),
+            defaults={"text": output.preprocessed_text},
         )
         run_output = TextProcessingJobRunOutput.objects.create(
-            run=self,
-            raw_text=raw_text,
-            preprocessed_text=PreprocessedText.objects.create(
-                preprocessor=job.preprocessor,
-                input=raw_text,
-                text=output.preprocessed_text,
-            ),
+            run=self, raw_text=raw_text, preprocessed_text=preprocessed_text
         )
         for processed_output in output.processed_outputs:
             processing_output = TextProcessingOutput.objects.create(
