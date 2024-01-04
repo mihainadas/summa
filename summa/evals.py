@@ -242,10 +242,10 @@ class Evaluators(Enum):
         case_sensitive=True, strip_padding=True, word_level=False
     )
     RA_CI_CL = RestorationAccuracyEvaluator(
-        case_sensitive=False, strip_padding=True, word_level=True
+        case_sensitive=False, strip_padding=True, word_level=False
     )
     RA_CS_WL = RestorationAccuracyEvaluator(
-        case_sensitive=True, strip_padding=True, word_level=False
+        case_sensitive=True, strip_padding=True, word_level=True
     )
     RA_CI_WL = RestorationAccuracyEvaluator(
         case_sensitive=False, strip_padding=True, word_level=True
