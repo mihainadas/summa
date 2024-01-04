@@ -1,5 +1,8 @@
+import logging
 from abc import ABC, abstractmethod
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluatorOutput:
@@ -38,6 +41,9 @@ class Evaluator(ABC):
         self.name = name
         self.description = description
 
+    def __str__(self) -> str:
+        return self.name
+
     @abstractmethod
     def evaluate(self, raw_text: str, processed_text: str) -> EvaluatorOutput:
         """
@@ -50,214 +56,74 @@ class Evaluator(ABC):
         pass
 
 
-def _f1_score(precision, recall):
+class RestorationEvaluator(Evaluator, ABC):
     """
-    Calculate the F1 score given the precision and recall.
-
-    Args:
-        precision (float): The precision value.
-        recall (float): The recall value.
-
-    Returns:
-        float: The F1 score.
-    """
-    return (
-        2 * (precision * recall) / (precision + recall)
-        if (precision + recall) > 0
-        else 0
-    )
-
-
-class F1ScoreWordsEvaluator(Evaluator):
-    """
-    Evaluates the restored text against the original text using the F1 score for word-level evaluation.
+    Specialized evaluator for restoration evaluators. Provides methods for adjusting inputs for case sensitivity and padding and for evaluating at character and word levels.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        case_sensitive=True,
+        strip_padding=True,
+        word_level=False,
+    ):
+        self.case_sensitive = case_sensitive
+        self.strip_padding = strip_padding
+        self.word_level = word_level
+
+        name = f'{name} ({"Case Sensitive" if case_sensitive else "Case Insensitive"}, {"Word" if word_level else "Character"} Level, {"Padding Stripped" if strip_padding else "Padding Preserved"})'
+
+        super().__init__(name, description)
+
+    def adjust_inputs(self, raw_text: str, processed_text: str) -> tuple[str, str]:
         """
-        Initializes the evaluator.
-        """
-        super().__init__("F1 Score (Words)", "A word-level F1 score evaluator.")
-
-    def evaluate(self, raw_text: str, processed_text: str) -> float:
-        """
-        Evaluates the restored text against the original text using the F1 score for word-level evaluation.
+        Adjusts the inputs for the evaluator based on the evaluator's settings.
 
         Args:
             raw_text (str): The original text.
-            processed_text (str): The restored text.
+            processed_text (str): The processed text.
 
         Returns:
-            float: The F1 score.
+            tuple[str, str]: The adjusted inputs.
         """
-        raw_words = raw_text.split()
-        processed_words = processed_text.split()
+        if not self.case_sensitive:
+            raw_text = raw_text.lower()
+            processed_text = processed_text.lower()
 
-        # Initialize counts
-        TP = 0
-        FP = 0
-        FN = 0
+        if self.strip_padding:
+            raw_text = raw_text.strip()
+            processed_text = processed_text.strip()
 
-        # Iterate through the words
-        for orig_word, rest_word in zip(raw_words, processed_words):
-            if orig_word == rest_word:
-                TP += 1  # Correctly restored word
-            else:
-                FP += 1  # Word does not match
-                FN += 1  # Missed correct word
-
-        # Adjust for length differences
-        len_diff = abs(len(raw_words) - len(processed_words))
-        FP += len_diff
-        FN += len_diff
-
-        # Calculating Precision and Recall
-        precision = TP / (TP + FP) if TP + FP > 0 else 0
-        recall = TP / (TP + FN) if TP + FN > 0 else 0
-
-        return _f1_score(precision, recall)
+        return raw_text, processed_text
 
 
-class F1ScoreWordsEvaluatorCaseInsensitive(F1ScoreWordsEvaluator):
-    """
-    Evaluates the restored text against the original text using the F1 score for word-level evaluation.
-    """
+class RestorationAccuracyEvaluator(RestorationEvaluator):
+    def __init__(
+        self,
+        case_sensitive=True,
+        strip_padding=True,
+        word_level=False,
+    ):
+        super().__init__(
+            "RA",
+            "Restoration Accuracy: Evaluator for calculating the accuracy of a restoration.",
+            case_sensitive,
+            strip_padding,
+            word_level,
+        )
 
-    def __init__(self):
-        """
-        Initializes the evaluator.
-        """
-        self.name = "F1 Score (Words, Case Insensitive)"
-        self.description = "A word-level F1 score evaluator that is case insensitive."
-
-    def evaluate(self, raw_text: str, processed_text: str) -> float:
-        return super().evaluate(raw_text.lower(), processed_text.lower())
-
-
-class F1ScoreCharsEvaluator(Evaluator):
-    """
-    Evaluates the restored text against the original text using the F1 score for character-level evaluation.
-    """
-
-    def __init__(self):
-        """
-        Initializes the evaluator.
-        """
-        super().__init__("F1 Score (Chars)", "A character-level F1 score evaluator.")
-
-    def evaluate(self, raw_text: str, processed_text: str) -> float:
-        """
-        Evaluates the restored text against the original text using the F1 score for character-level evaluation.
-
-        Args:
-            raw_text (str): The original text.
-            processed_text (str): The restored text.
-
-        Returns:
-            float: The F1 score.
-        """
-        # Initialize counts for true positives, false positives, and false negatives
-        TP, FP, FN = 0, 0, 0
-
-        # Iterate through the characters of the original and restored text
-        for raw_char, proc_char in zip(raw_text, processed_text):
-            if raw_char == proc_char:
-                TP += 1  # Correctly restored diacritic
-            else:
-                if raw_char.lower() == proc_char.lower():
-                    FN += 1  # Missed diacritic
-                else:
-                    FP += 1  # Incorrectly added or misplaced diacritic
-
-        # Adjust for lengths
-        FP += abs(len(processed_text) - len(raw_text))
-
-        # Calculate Precision and Recall
-        precision = TP / (TP + FP) if (TP + FP) > 0 else 0
-        recall = TP / (TP + FN) if (TP + FN) > 0 else 0
-
-        # Calculate F1 Score
-        return _f1_score(precision, recall)
-
-
-class CharacterAccuracyEvaluator(Evaluator):
-    """
-    Evaluates the restored text against the original text using the character accuracy score.
-    """
-
-    def __init__(self):
-        """
-        Initializes the evaluator.
-        """
-        super().__init__("Character Accuracy", "A character-level accuracy evaluator.")
-
-    def evaluate(self, raw_text: str, processed_text: str) -> float:
-        """
-        Evaluates the restored text against the original text using the character accuracy score.
-
-        Args:
-            raw_text (str): The original text.
-            processed_text (str): The restored text.
-
-        Returns:
-            float: The character accuracy score.
-        """
-        # Check if the number of characters match, otherwise return 0
-        if len(raw_text) != len(processed_text):
-            return 0
-
-        # Initialize counts
-        total_diacritics = 0
-        correct_restorations = 0
-
-        # Iterate through the characters of both texts
-        for raw_char, proc_char in zip(raw_text, processed_text):
-            if raw_char.lower() in [
-                "ă",
-                "â",
-                "î",
-                "ș",
-                "ț",
-            ]:  # Check if character is a diacritic
-                total_diacritics += 1
-                if raw_char == proc_char:
-                    correct_restorations += 1
-
-        # Calculate accuracy
-        if total_diacritics == 0:
-            return 1.0  # Avoid division by zero; if no diacritics, accuracy is perfect
-        score = correct_restorations / total_diacritics
-        return score
-
-
-class WordAccuracyEvaluator(Evaluator):
-    """
-    Evaluates the restored text against the original text using the word accuracy score.
-    """
-
-    def __init__(self):
-        """
-        Initializes the evaluator.
-        """
-        super().__init__("Word Accuracy", "A word-level accuracy evaluator.")
-
-    def evaluate(self, raw_text: str, processed_text: str) -> float:
-        """
-        Evaluates the restored text against the original text using the word accuracy score.
-
-        Args:
-            raw_text (str): The original text.
-            processed_text (str): The restored text.
-
-        Returns:
-            float: The word accuracy score.
-        """
+    def _evaluate_word_level(self, raw_text: str, processed_text: str) -> float:
         # Splitting the texts into words
         raw_words = raw_text.split()
         processed_words = processed_text.split()
 
         # Check if the number of words match, otherwise return 0
         if len(raw_words) != len(processed_words):
+            logger.warning(
+                "The lengths of original and restored texts must be the same for accuracy calculation."
+            )
             return 0
 
         # Initialize counts
@@ -267,18 +133,132 @@ class WordAccuracyEvaluator(Evaluator):
         # Iterate through the words
         for raw_word, proc_word in zip(raw_words, processed_words):
             if raw_word == proc_word:
-                correct_restorations += 1  # Correctly restored word
+                correct_restorations += 1
 
-        # Calculate accuracy
-        if total_words == 0:
-            return 1.0  # Avoid division by zero; if no words, accuracy is perfect
-        score = correct_restorations / total_words
-        return score
+        return correct_restorations / total_words
+
+    def _evaluate_char_level(self, raw_text: str, processed_text: str) -> float:
+        # Check if the number of characters match, otherwise return 0
+        if len(raw_text) != len(processed_text):
+            logger.warning(
+                "The lengths of original and restored texts must be the same for accuracy calculation."
+            )
+            return 0
+
+        # Initialize counts
+        total_chars = len(raw_text)
+        correct_restorations = 0
+
+        # Iterate through the characters
+        for raw_char, proc_char in zip(raw_text, processed_text):
+            if raw_char == proc_char:
+                correct_restorations += 1
+
+        return correct_restorations / total_chars
+
+    def evaluate(self, raw_text: str, processed_text: str) -> float:
+        """
+        Evaluates the restored text against the original text.
+
+        Args:
+            raw_text (str): The original text.
+            processed_text (str): The processed text.
+
+        Returns:
+            float: The score of the evaluator.
+        """
+
+        (raw_text, processed_text) = self.adjust_inputs(raw_text, processed_text)
+
+        if self.word_level:
+            return self._evaluate_word_level(raw_text, processed_text)
+        else:
+            return self._evaluate_char_level(raw_text, processed_text)
+
+
+class RestorationErrorRateEvaluator(RestorationEvaluator):
+    def __init__(
+        self,
+        case_sensitive=True,
+        strip_padding=True,
+        word_level=False,
+    ):
+        super().__init__(
+            "RER",
+            "Restoration Error Rate: Evaluator for calculating the error rate of a restoration.",
+            case_sensitive,
+            strip_padding,
+            word_level,
+        )
+
+    @staticmethod
+    def levenshtein_distance(s1, s2):
+        if len(s1) < len(s2):
+            return RestorationErrorRateEvaluator.levenshtein_distance(s2, s1)
+
+        if len(s2) == 0:
+            return len(s1)
+
+        previous_row = range(len(s2) + 1)
+        for i, c1 in enumerate(s1):
+            current_row = [i + 1]
+            for j, c2 in enumerate(s2):
+                insertions = previous_row[j + 1] + 1
+                deletions = current_row[j] + 1
+                substitutions = previous_row[j] + (c1 != c2)
+                current_row.append(min(insertions, deletions, substitutions))
+            previous_row = current_row
+
+        return previous_row[-1]
+
+    @staticmethod
+    def calculate_cer(original_text, restored_text):
+        distance = RestorationErrorRateEvaluator.levenshtein_distance(
+            original_text, restored_text
+        )
+        return distance / len(original_text)
+
+    @staticmethod
+    def calculate_wer(original_text, restored_text):
+        original_words = original_text.split()
+        restored_words = restored_text.split()
+        distance = RestorationErrorRateEvaluator.levenshtein_distance(
+            original_words, restored_words
+        )
+        return distance / len(original_words)
+
+    def evaluate(self, raw_text: str, processed_text: str) -> EvaluatorOutput:
+        (raw_text, processed_text) = self.adjust_inputs(raw_text, processed_text)
+
+        # calculations are inverted (1 - error rate) because we want to be consistent with the other evaluators
+        if self.word_level:
+            return 1 - self.calculate_wer(raw_text, processed_text)
+        else:
+            return 1 - self.calculate_cer(raw_text, processed_text)
 
 
 class Evaluators(Enum):
-    F1_SCORE_WORDS = F1ScoreWordsEvaluator()
-    F1_SCORE_WORDS_CASE_INSENSITIVE = F1ScoreWordsEvaluatorCaseInsensitive()
-    F1_SCORE_CHARS = F1ScoreCharsEvaluator()
-    CHARACTER_ACCURACY = CharacterAccuracyEvaluator()
-    WORD_ACCURACY = WordAccuracyEvaluator()
+    RA_CS_CL = RestorationAccuracyEvaluator(
+        case_sensitive=True, strip_padding=True, word_level=False
+    )
+    RA_CI_CL = RestorationAccuracyEvaluator(
+        case_sensitive=False, strip_padding=True, word_level=True
+    )
+    RA_CS_WL = RestorationAccuracyEvaluator(
+        case_sensitive=True, strip_padding=True, word_level=False
+    )
+    RA_CI_WL = RestorationAccuracyEvaluator(
+        case_sensitive=False, strip_padding=True, word_level=True
+    )
+    RER_CS_CL = RestorationErrorRateEvaluator(
+        case_sensitive=True, strip_padding=True, word_level=False
+    )
+    RER_CI_CL = RestorationErrorRateEvaluator(
+        case_sensitive=False, strip_padding=True, word_level=True
+    )
+    RER_CS_WL = RestorationErrorRateEvaluator(
+        case_sensitive=True, strip_padding=True, word_level=False
+    )
+    RER_CI_WL = RestorationErrorRateEvaluator(
+        case_sensitive=False, strip_padding=True, word_level=True
+    )

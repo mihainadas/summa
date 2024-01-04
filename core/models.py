@@ -53,6 +53,7 @@ class MD5TextModel(TextModel):
 
     class Meta:
         abstract = True
+        indexes = [models.Index(fields=["text_md5"])]
 
 
 def data_source_upload_path(instance, filename):
@@ -245,20 +246,14 @@ class TextProcessingJobRun(models.Model):
         max_length=200, choices=Statuses.choices, default=Statuses.CREATED
     )
 
-    def set_start(self):
-        self.status = TextProcessingJobRun.Statuses.STARTED
-        self.started_at = timezone.now()
-        self.save()
-
-    def set_finish(self):
-        self.status = TextProcessingJobRun.Statuses.FINISHED
-        self.finished_at = timezone.now()
+    def set_status(self, status: Statuses):
+        self.status = status
         self.save()
 
     @transaction.atomic
     def _save_output(self, job: "TextProcessingJob", output: PipelineRunOutput):
         raw_text, _ = RawText.objects.get_or_create(
-            data_source=job.data_source, text=output.raw_text
+            data_source=job.data_source, text_md5=md5(output.raw_text)
         )
         run_output = TextProcessingJobRunOutput.objects.create(
             run=self,
@@ -303,7 +298,7 @@ class TextProcessingJobRun(models.Model):
             preprocessor, processor, llms, prompt_templates, evaluators
         )
 
-        self.set_start()
+        self.set_status(self.Statuses.STARTED)
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
@@ -314,8 +309,11 @@ class TextProcessingJobRun(models.Model):
                     self._save_output(self.job, future.result())
                 except Exception as e:
                     logger.error(e, exc_info=True)
+                    self.set_status(self.Statuses.FAILED)
+                    logger.error("Job failed, cancelling remaining jobs")
+                    return
 
-        self.set_finish()
+        self.set_status(self.Statuses.FINISHED)
 
 
 class TextProcessingJob(models.Model):

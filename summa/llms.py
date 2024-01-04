@@ -12,7 +12,7 @@ class PromptTemplate:
     A class for storing a prompt template and its keyword arguments.
     """
 
-    def __init__(self, template=None, template_filename=None):
+    def __init__(self, template=None, template_filename=None, prompts_dir="prompts"):
         """
         Initializes a PromptTemplate object.
 
@@ -28,11 +28,11 @@ class PromptTemplate:
             self.template_filename = None
         elif template_filename is not None:
             self.template_filename = template_filename
-            self._set_template_from_file(template_filename)
+            self._set_template_from_file(template_filename, prompts_dir=prompts_dir)
         else:
             raise ValueError("Prompt template or template filename must be specified")
 
-    def _set_template_from_file(self, template_filename, prompts_dir="prompts"):
+    def _set_template_from_file(self, template_filename, prompts_dir):
         """
         Sets the prompt template from a file.
 
@@ -99,6 +99,7 @@ class ModelVersions(Enum):
     Enum class representing different model versions.
     """
 
+    SUMMA_ECHO = "summa-echo"
     OPENAI_GPT_3_5_TURBO = "gpt-3.5-turbo"
     OPENAI_GPT_4 = "gpt-4"
     OPENAI_GPT_4_TURBO = "gpt-4-1106-preview"
@@ -139,6 +140,24 @@ class TextGenerationOutput:
 
     def measure_generation_time(self):
         self.generation_time = time.time() - self._generation_time_start
+
+
+class Summa(TextGenerationLLM):
+    def __init__(self, model_version=ModelVersions.SUMMA_ECHO):
+        super().__init__("Summa", model_version)
+
+    def generate(self, prompt):
+        if not self.model_version == ModelVersions.SUMMA_ECHO.value:
+            raise ValueError(
+                f"Invalid model version for Summa: {self.model_version}. Expected: {ModelVersions.SUMMA_ECHO.value}"
+            )
+        output = TextGenerationOutput(
+            model=self.model, model_version=self.model_version, prompt=prompt
+        )
+        # Return the prompt input as the output, effectively echoing it (used for baseline comparison)
+        output.output = "\n".join(prompt.kwargs.values())
+        output.measure_generation_time()
+        return output
 
 
 class OpenAIClient(TextGenerationLLM):
@@ -205,6 +224,7 @@ class MistralAI(DeepInfraClient):
 
 
 class TextGenerationLLMs(Enum):
+    SUMMA_ECHO = Summa(model_version=ModelVersions.SUMMA_ECHO)
     OPENAI_GPT_3_5_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_3_5_TURBO)
     OPENAI_GPT_4 = OpenAI(model_version=ModelVersions.OPENAI_GPT_4)
     OPENAI_GPT_4_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_4_TURBO)

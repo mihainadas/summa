@@ -148,6 +148,7 @@ class TextProcessingJobRunAdmin(ModelAdmin):
         "run_outputs_count",
         "runtime_per_run_output",
         "processed_outputs_count",
+        "status",
     )
     list_filter = (
         "job",
@@ -168,7 +169,7 @@ class TextProcessingJobRunAdmin(ModelAdmin):
             runtime = obj.finished_at - obj.started_at
             minutes = runtime.seconds // 60
             seconds = runtime.seconds % 60
-            return f"{minutes} minutes {seconds} seconds"
+            return f"{minutes} mins {seconds} secs"
         else:
             return None
 
@@ -179,11 +180,12 @@ class TextProcessingJobRunAdmin(ModelAdmin):
 
     def runtime_per_run_output(self, obj):
         outputs = self.run_outputs_count(obj)
-        if obj.finished_at and obj.started_at:
+        if obj.finished_at and obj.started_at and outputs > 0:
             runtime = (obj.finished_at - obj.started_at) / outputs
             minutes = runtime.seconds // 60
             seconds = runtime.seconds % 60
-            return f"{minutes} minutes {seconds} seconds"
+            milliseconds = runtime.microseconds // 1000
+            return f"{minutes} mins {seconds} secs {milliseconds} ms"
         else:
             return None
 
