@@ -239,6 +239,10 @@ class TextProcessingJobRun(models.Model):
 
     def set_status(self, status: Statuses):
         self.status = status
+        if status == self.Statuses.STARTED:
+            self.started_at = timezone.now()
+        elif status == self.Statuses.FINISHED:
+            self.finished_at = timezone.now()
         self.save()
 
     @transaction.atomic

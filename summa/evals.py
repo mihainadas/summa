@@ -121,7 +121,7 @@ class RestorationAccuracyEvaluator(RestorationEvaluator):
 
         # Check if the number of words match, otherwise return 0
         if len(raw_words) != len(processed_words):
-            logger.warning(
+            logger.info(
                 "The lengths of original and restored texts must be the same for accuracy calculation."
             )
             return 0
@@ -140,7 +140,7 @@ class RestorationAccuracyEvaluator(RestorationEvaluator):
     def _evaluate_char_level(self, raw_text: str, processed_text: str) -> float:
         # Check if the number of characters match, otherwise return 0
         if len(raw_text) != len(processed_text):
-            logger.warning(
+            logger.info(
                 "The lengths of original and restored texts must be the same for accuracy calculation."
             )
             return 0
