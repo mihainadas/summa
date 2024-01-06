@@ -1,6 +1,7 @@
-.venv
-.env
+/.pytest_cache/
+/.venv/
+/galandriel/media
+/galandriel/logs
+/galandriel/db.sqlite3
+/.env
 __pycache__
-db.sqlite3
-galandriel/media
-galandriel/logs

@@ -1,9 +1,17 @@
-.venv
-.env
-.vscode
+# directories
+/.git/
+/.github/
+/.pytest_cache/
+/.venv/
+/.vscode/
+/galandriel/media/
+/galandriel/logs/
+
+# files
+/.env
+/.env.example
+/.gitignore
+/galandriel/db.sqlite3
+
+# patterns
 __pycache__
-db.sqlite3
-.gitignore
-galandriel/media
-galandriel/logs
-./data
