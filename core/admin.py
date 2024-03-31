@@ -2,6 +2,7 @@ from django.contrib.admin.sites import AdminSite
 from .admin_actions import (
     datasource_slugify_name,
     textprocessingjob_run,
+    textprocessingjobrun_recover,
 )
 from django.db.models import Avg
 from django.contrib import admin
@@ -157,6 +158,7 @@ class TextProcessingJobRunAdmin(ModelAdmin):
         "job__llms",
     )
     readonly_fields = ("created_at",)
+    actions = [textprocessingjobrun_recover]
     inlines = [
         TextProcessingJobRunOutputInline,
     ]

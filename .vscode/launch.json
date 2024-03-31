@@ -12,6 +12,8 @@
             "args": [
                 "runserver",
                 "8080",
+                "--settings",
+                "galandriel.settings.base"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -24,6 +26,8 @@
             "program": "${workspaceFolder}/manage.py",
             "args": [
                 "process_tasks",
+                "--settings",
+                "galandriel.settings.base"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

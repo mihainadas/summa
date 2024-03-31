@@ -31,3 +31,20 @@ def textprocessingjob_run(modeladmin, request, queryset):
         messages.info(
             request, f"Created Job Run {run_id}. Check Background Tasks for status."
         )
+
+
+@background(schedule=0)
+def _task_textprocessingjobrun_recover(run_id):
+    logger.info(f"TextProcessingJobRun {run_id} scheduled for background execution.")
+    TextProcessingJobRun.objects.get(id=run_id).run(recover=True)
+
+
+@admin.action(description="Recover selected %(verbose_name_plural)s")
+def textprocessingjobrun_recover(modeladmin, request, queryset):
+    for textprocessingjobrun in queryset:
+        run_id = textprocessingjobrun.id
+        _task_textprocessingjobrun_recover(run_id)
+        messages.info(
+            request,
+            f"Initiated recovery of Job Run {textprocessingjobrun.id}. Check Background Tasks for status.",
+        )

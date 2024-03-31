@@ -228,6 +228,7 @@ class TextProcessingJobRun(models.Model):
         STARTED = "STARTED", "Started"
         FINISHED = "FINISHED", "Finished"
         FAILED = "FAILED", "Failed"
+        RECOVERING = "RECOVERING", "Recovering"
 
     job = models.ForeignKey("TextProcessingJob", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -283,7 +284,7 @@ class TextProcessingJobRun(models.Model):
                     score=evaluator_output.score,
                 )
 
-    def run(self):
+    def run(self, recover=False):
         preprocessor = self.job.preprocessor.instance
         processor = self.job.processor.instance
         llms = [llm.instance for llm in self.job.llms.all()]
@@ -295,7 +296,17 @@ class TextProcessingJobRun(models.Model):
             preprocessor, processor, llms, prompt_templates, evaluators
         )
 
-        self.set_status(self.Statuses.STARTED)
+        if recover:
+            self.set_status(self.Statuses.RECOVERING)
+            logger.info(f"Recovering job run {self.id}")
+            existing_outputs = TextProcessingJobRunOutput.objects.filter(run=self)
+            existing_raw_texts = [output.raw_text.text for output in existing_outputs]
+            raw_texts = [
+                raw_text for raw_text in raw_texts if raw_text not in existing_raw_texts
+            ]
+        else:
+            self.set_status(self.Statuses.STARTED)
+            logger.info(f"Starting job run {self.id}")
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
@@ -308,7 +319,6 @@ class TextProcessingJobRun(models.Model):
                     logger.error(e, exc_info=True)
                     self.set_status(self.Statuses.FAILED)
                     logger.error("Job failed, cancelling remaining jobs")
-                    return
 
         self.set_status(self.Statuses.FINISHED)
 
