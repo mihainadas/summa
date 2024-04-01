@@ -1,6 +1,6 @@
 # Project Summa
 
-Project Summa is a sophisticated text processing system built with Python and Django. It provides a modular and scalable solution for various text processing tasks.
+Project Summa is an LLM-based text processing system built with Python and Django. It provides a modular and scalable solution for various text processing tasks.
 
 ## Features
 
