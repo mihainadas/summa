@@ -30,3 +30,10 @@ These instructions will get you a copy of the project up and running on your loc
 ## License
 
 This project is licensed under the MIT License.
+
+## Academic Contact
+
+For further information, academic collaborations, or data inquiries, please contact:
+
+**Mihai Dan NADĂȘ, Ph.D. Candidate**  
+Email: [mihai.nadas@ubbcluj.ro](mailto:mihai.nadas@ubbcluj.ro)
