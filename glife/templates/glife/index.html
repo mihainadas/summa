@@ -1,7 +1,6 @@
 {% extends "core/index.html" %}
-
 {% block content %}
-<h2>Glife</h2>
-<div hx-get="/glife/time" hx-trigger="load, every 1s"></div>
-<!-- <iframe src="http://localhost:8010/dashboard/1" width="100%" height="500px"></iframe> -->
+    <h2>Glife</h2>
+    <div hx-get="/glife/time" hx-trigger="load, every 1s"></div>
+    <!-- <iframe src="http://localhost:8010/dashboard/1" width="100%" height="500px"></iframe> -->
 {% endblock %}
