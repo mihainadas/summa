@@ -1,4 +1,5 @@
 import openai
+import google.generativeai as genai
 import logging
 import time
 import os
@@ -94,25 +95,13 @@ class Prompt:
         return self.prompt
 
 
-class ModelVersions(Enum):
-    """
-    Enum class representing different model versions.
-    """
-
-    SUMMA_ECHO = "summa-echo"
-    OPENAI_GPT_3_5_TURBO = "gpt-3.5-turbo"
-    OPENAI_GPT_4 = "gpt-4"
-    OPENAI_GPT_4_TURBO = "gpt-4-1106-preview"
-    META_LLAMA_2_70B_CHAT_HF = "meta-llama/Llama-2-70b-chat-hf"
-    META_LLAMA_2_7B_CHAT_HF = "meta-llama/Llama-2-7b-chat-hf"
-    DEEPINFRA_AIROBOROS_70B = "deepinfra/airoboros-70b"
-    MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-
-
 class TextGenerationLLM(ABC):
-    def __init__(self, model, model_version: ModelVersions):
+    def __init__(self, model, model_version):
         self.model = model
         self.model_version = model_version.value
+
+    def __str__(self):
+        return f"{self.model_version} ({self.model})"
 
     @abstractmethod
     def generate(self, prompt: Prompt) -> "TextGenerationOutput":
@@ -120,9 +109,7 @@ class TextGenerationLLM(ABC):
 
 
 class TextGenerationOutput:
-    def __init__(
-        self, model: TextGenerationLLM, model_version: ModelVersions, prompt: Prompt
-    ):
+    def __init__(self, model: TextGenerationLLM, model_version, prompt: Prompt):
         self.model = model
         self.model_version = model_version
         self.prompt_template = prompt.prompt_template.template
@@ -143,13 +130,16 @@ class TextGenerationOutput:
 
 
 class Summa(TextGenerationLLM):
+    class ModelVersions(Enum):
+        SUMMA_ECHO = "summa-echo"
+
     def __init__(self, model_version=ModelVersions.SUMMA_ECHO):
         super().__init__("Summa", model_version)
 
     def generate(self, prompt):
-        if not self.model_version == ModelVersions.SUMMA_ECHO.value:
+        if self.model_version != Summa.ModelVersions.SUMMA_ECHO.value:
             raise ValueError(
-                f"Invalid model version for Summa: {self.model_version}. Expected: {ModelVersions.SUMMA_ECHO.value}"
+                f"Invalid model version for Summa: {self.model_version}. Expected: {self.ModelVersions.SUMMA_ECHO.value}"
             )
         output = TextGenerationOutput(
             model=self.model, model_version=self.model_version, prompt=prompt
@@ -185,8 +175,10 @@ class OpenAIClient(TextGenerationLLM):
             output.measure_generation_time()
             return output
         except Exception as e:
-            logging.error(f"Error occurred during text generation: {str(e)}")
-            return None
+            logging.error(
+                f"Error occurred during text generation: {str(e)} (Model: {self.model}, Model Version: {self.model_version})"
+            )
+            raise e
 
 
 class DeepInfraClient(OpenAIClient):
@@ -200,41 +192,121 @@ class DeepInfraClient(OpenAIClient):
         )
 
 
+class GoogleAIClient(TextGenerationLLM):
+    def __init__(self, model, model_version, api_key):
+        genai.configure(api_key=api_key)
+        super().__init__(model, model_version)
+
+    def generate(self, prompt):
+        try:
+            output = TextGenerationOutput(
+                model=self.model, model_version=self.model_version, prompt=prompt
+            )
+            # Generate text using the Google chat completions API, stripping whitespace
+            output.output = (
+                genai.GenerativeModel(self.model_version)
+                .generate_content(prompt.prompt)
+                .text.strip()
+            )
+            # Calculate the time it took to generate it
+            output.measure_generation_time()
+            return output
+        except Exception as e:
+            logging.error(
+                f"Error occurred during text generation: {str(e)} (Model: {self.model}, Model Version: {self.model_version})"
+            )
+            raise e
+
+
 class OpenAI(OpenAIClient):
-    def __init__(self, model_version=ModelVersions.OPENAI_GPT_3_5_TURBO):
+    class ModelVersions(Enum):
+        GPT_3_5_TURBO = "gpt-3.5-turbo"
+        GPT_4 = "gpt-4"
+        GPT_4_TURBO = "gpt-4-turbo"
+        GPT_4o = "gpt-4o"
+
+    def __init__(self, model_version=ModelVersions.GPT_4o):
         api_key = config("OPENAI_API_KEY", default="None")
         super().__init__("OpenAI", model_version, api_key)
 
 
 class Meta(DeepInfraClient):
-    def __init__(self, model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF):
+    class ModelVersions(Enum):
+        META_LLAMA_2_7B_CHAT_HF = "meta-llama/Llama-2-7b-chat-hf"
+        META_LLAMA_2_70B_CHAT_HF = "meta-llama/Llama-2-70b-chat-hf"
+        META_LLAMA_3_8B_INSTRUCT = "meta-llama/Meta-Llama-3-8B-Instruct"
+        META_LLAMA_3_70B_INSTRUCT = "meta-llama/Meta-Llama-3-70B-Instruct"
+
+    def __init__(self, model_version=ModelVersions.META_LLAMA_3_70B_INSTRUCT):
         super().__init__("Meta", model_version)
 
 
 class DeepInfra(DeepInfraClient):
+    class ModelVersions(Enum):
+        DEEPINFRA_AIROBOROS_70B = "deepinfra/airoboros-70b"
+
     def __init__(self, model_version=ModelVersions.DEEPINFRA_AIROBOROS_70B):
         super().__init__("DeepInfra", model_version)
 
 
 class MistralAI(DeepInfraClient):
+    class ModelVersions(Enum):
+        MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+
     def __init__(
         self, model_version=ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1
     ):
         super().__init__("MistralAI", model_version)
 
 
+class OpenLLMRO(DeepInfraClient):
+    class ModelVersions(Enum):
+        OPENLLMRO_ROLLAMA_2_7B_CHAT_V1 = "mihainadas/RoLlama2-7b-Chat-v1"
+
+    def __init__(self, model_version=ModelVersions.OPENLLMRO_ROLLAMA_2_7B_CHAT_V1):
+        super().__init__("OpenLLM-Ro", model_version)
+
+
+class Google(GoogleAIClient):
+    class ModelVersions(Enum):
+        GEMINI_1_0_PRO = "gemini-1.0-pro-latest"
+        GEMINI_1_5_PRO = "gemini-1.5-pro-latest"
+        GEMINI_1_5_FLASH = "gemini-1.5-flash-latest"
+
+    def __init__(self, model_version):
+        api_key = config("GCP_API_KEY", default="None")
+        super().__init__("Google", model_version, api_key)
+
+
 class TextGenerationLLMs(Enum):
-    SUMMA_ECHO = Summa(model_version=ModelVersions.SUMMA_ECHO)
-    OPENAI_GPT_3_5_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_3_5_TURBO)
-    OPENAI_GPT_4 = OpenAI(model_version=ModelVersions.OPENAI_GPT_4)
-    OPENAI_GPT_4_TURBO = OpenAI(model_version=ModelVersions.OPENAI_GPT_4_TURBO)
+    SUMMA_ECHO = Summa()
+
+    OPENAI_GPT_3_5_TURBO = OpenAI(model_version=OpenAI.ModelVersions.GPT_3_5_TURBO)
+    OPENAI_GPT_4 = OpenAI(model_version=OpenAI.ModelVersions.GPT_4)
+    OPENAI_GPT_4_TURBO = OpenAI(model_version=OpenAI.ModelVersions.GPT_4_TURBO)
+    OPENAI_GPT_4o = OpenAI(model_version=OpenAI.ModelVersions.GPT_4o)
+
+    GOOGLE_GEMINI_1_0_PRO = Google(model_version=Google.ModelVersions.GEMINI_1_0_PRO)
+    GOOGLE_GEMINI_1_5_PRO = Google(model_version=Google.ModelVersions.GEMINI_1_5_PRO)
+    GOOGLE_GEMINI_1_5_FLASH = Google(
+        model_version=Google.ModelVersions.GEMINI_1_5_FLASH
+    )
+
+    META_LLAMA_2_7B_CHAT_HF = Meta(
+        model_version=Meta.ModelVersions.META_LLAMA_2_7B_CHAT_HF
+    )
     META_LLAMA_2_70B_CHAT_HF = Meta(
-        model_version=ModelVersions.META_LLAMA_2_70B_CHAT_HF
+        model_version=Meta.ModelVersions.META_LLAMA_2_70B_CHAT_HF
     )
-    META_LLAMA_2_7B_CHAT_HF = Meta(model_version=ModelVersions.META_LLAMA_2_7B_CHAT_HF)
-    DEEPINFRA_AIROBOROS_70B = DeepInfra(
-        model_version=ModelVersions.DEEPINFRA_AIROBOROS_70B
+    META_LLAMA_3_8B_INSTRUCT = Meta(
+        model_version=Meta.ModelVersions.META_LLAMA_3_8B_INSTRUCT
     )
-    MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = MistralAI(
-        model_version=ModelVersions.MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1
+    META_LLAMA_3_70B_INSTRUCT = Meta(
+        model_version=Meta.ModelVersions.META_LLAMA_3_70B_INSTRUCT
     )
+
+    DEEPINFRA_AIROBOROS_70B = DeepInfra()
+
+    MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = MistralAI()
+
+    OPENLLMRO_ROLLAMA_2_7B_CHAT_V1 = OpenLLMRO()

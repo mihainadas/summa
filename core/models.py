@@ -9,9 +9,11 @@ from django.db.utils import IntegrityError
 from django.utils.text import slugify
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils import timezone
+
+import summa.llms
 from .utils import short_text, md5
 from .models_validators import datasource_validate_json
-from summa.llms import ModelVersions, TextGenerationLLMs, TextGenerationLLM
+from summa.llms import TextGenerationLLMs, TextGenerationLLM
 from summa.preprocessors import TextPreprocessors, TextPreprocessor
 from summa.processors import TextProcessors, TextProcessor
 from summa.evals import Evaluators
@@ -169,16 +171,26 @@ class PromptTemplate(MD5TextModel):
 
 
 class LLM(models.Model):
-    model = models.CharField(max_length=200, editable=False)
+    model = models.CharField(
+        max_length=200, editable=False, verbose_name="Model Vendor"
+    )
     version = models.CharField(
         max_length=200,
         choices=[(v.name, v.name) for v in TextGenerationLLMs],
         unique=True,
+        verbose_name="Model Version",
     )
 
     def save(self, *args, **kwargs):
         if self.model is None or self.model == "":
-            self.model = TextGenerationLLMs[self.version].value.model
+            self.model = next(
+                (
+                    llm.value.model
+                    for llm in TextGenerationLLMs
+                    if llm.name == self.version
+                ),
+                None,
+            )
         super().save(*args, **kwargs)
 
     # TODO: When implementing new types of LLMs, the property below needs to be updated to return the correct type (e.g. instead of TextGenerationLLM, it should return the new type)
@@ -188,7 +200,7 @@ class LLM(models.Model):
         return TextGenerationLLMs[self.version].value
 
     def __str__(self):
-        return f"{self.model} - {self.version}"
+        return f"{self.version}"
 
     class Meta:
         verbose_name = "LLM"
@@ -266,7 +278,12 @@ class TextProcessingJobRun(models.Model):
             processing_output = TextProcessingOutput.objects.create(
                 run_output=run_output,
                 llm=job.llms.get(
-                    version=ModelVersions(processed_output.model_version).name
+                    model=processed_output.model,
+                    version=next(
+                        llm.name
+                        for llm in TextGenerationLLMs
+                        if llm.value.model_version == processed_output.model_version
+                    ),
                 ),
                 prompt_template=job.prompt_templates.get(
                     text=processed_output.prompt_template

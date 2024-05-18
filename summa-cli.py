@@ -9,21 +9,21 @@ from summa.pipelines import PipelineRunner, PipelineRunOutput
 import concurrent.futures
 import logging
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 preprocessor = TextPreprocessors.STRIP_DIACRITICS.value
-processor = TextProcessors.BASIC.value
+processor = TextProcessors.EXPONENTIAL_BACKOFF.value
 llms = [
-    TextGenerationLLMs.OPENAI_GPT_3_5_TURBO.value,
-    TextGenerationLLMs.OPENAI_GPT_4.value,
-    TextGenerationLLMs.OPENAI_GPT_4_TURBO.value,
-    TextGenerationLLMs.TextGenerationLLMs.DEEPINFRA_AIROBOROS_70B.value,
+    TextGenerationLLMs.META_LLAMA_3_70B_INSTRUCT.value,
+    TextGenerationLLMs.GOOGLE_GEMINI_1_0_PRO.value,
+    TextGenerationLLMs.GOOGLE_GEMINI_1_5_PRO.value,
 ]
 prompt_templates = [
     # PromptTemplate(template_filename="restore_diacritics.md"),
     # PromptTemplate(template_filename="restore_diacritics_verbose.md"),
     # PromptTemplate(template_filename="restore_diacritics_verbose_1s.md"),
-    PromptTemplate(template_filename="restore_diacritics_verbose_2s.md"),
+    PromptTemplate(template_filename="restore_diacritics_verbose_3s.md"),
 ]
 evaluators = [
     # Evaluators.F1_SCORE_WORDS.value,
