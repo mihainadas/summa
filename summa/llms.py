@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from decouple import config
 from enum import Enum
 
+logger = logging.getLogger(__name__)
+
 
 class PromptTemplate:
     """
@@ -175,7 +177,7 @@ class OpenAIClient(TextGenerationLLM):
             output.measure_generation_time()
             return output
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"Error occurred during text generation: {str(e)} (Model: {self.model}, Model Version: {self.model_version})"
             )
             raise e
@@ -202,18 +204,38 @@ class GoogleAIClient(TextGenerationLLM):
             output = TextGenerationOutput(
                 model=self.model, model_version=self.model_version, prompt=prompt
             )
+
+            # Setting up the model
+            generation_config = {
+                "temperature": 0.0,
+            }
+            safety_settings = {}
+            for harm_category in genai.types.HarmCategory:
+                if not harm_category in [
+                    genai.types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
+                    genai.types.HarmCategory.HARM_CATEGORY_DEROGATORY,
+                    genai.types.HarmCategory.HARM_CATEGORY_TOXICITY,
+                    genai.types.HarmCategory.HARM_CATEGORY_VIOLENCE,
+                    genai.types.HarmCategory.HARM_CATEGORY_SEXUAL,
+                    genai.types.HarmCategory.HARM_CATEGORY_MEDICAL,
+                    genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS,
+                ]:
+                    safety_settings[harm_category] = (
+                        genai.types.HarmBlockThreshold.BLOCK_NONE
+                    )
             # Generate text using the Google chat completions API, stripping whitespace
-            output.output = (
-                genai.GenerativeModel(self.model_version)
-                .generate_content(prompt.prompt)
-                .text.strip()
+            response = genai.GenerativeModel(self.model_version).generate_content(
+                prompt.prompt,
+                generation_config=generation_config,
+                safety_settings=safety_settings,
             )
+            output.output = response.text.strip()
             # Calculate the time it took to generate it
             output.measure_generation_time()
             return output
         except Exception as e:
-            logging.error(
-                f"Error occurred during text generation: {str(e)} (Model: {self.model}, Model Version: {self.model_version})"
+            logger.error(
+                f"Unexpected error during text generation: {str(e)} (Model: {self.model}, Model Version: {self.model_version}, Prompt Feedback: {response.prompt_feedback if response.prompt_feedback else 'N/A'}, Prompt: {prompt.prompt})"
             )
             raise e
 

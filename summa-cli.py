@@ -15,15 +15,13 @@ log = logging.getLogger(__name__)
 preprocessor = TextPreprocessors.STRIP_DIACRITICS.value
 processor = TextProcessors.EXPONENTIAL_BACKOFF.value
 llms = [
-    TextGenerationLLMs.META_LLAMA_3_70B_INSTRUCT.value,
     TextGenerationLLMs.GOOGLE_GEMINI_1_0_PRO.value,
-    TextGenerationLLMs.GOOGLE_GEMINI_1_5_PRO.value,
 ]
 prompt_templates = [
     # PromptTemplate(template_filename="restore_diacritics.md"),
-    # PromptTemplate(template_filename="restore_diacritics_verbose.md"),
+    PromptTemplate(template_filename="restore_diacritics_verbose.md"),
     # PromptTemplate(template_filename="restore_diacritics_verbose_1s.md"),
-    PromptTemplate(template_filename="restore_diacritics_verbose_3s.md"),
+    # PromptTemplate(template_filename="restore_diacritics_verbose_3s.md"),
 ]
 evaluators = [
     # Evaluators.F1_SCORE_WORDS.value,
@@ -37,6 +35,11 @@ json_crawler = "../summa-data/dexonline/crawler/json/dexonline_crawler_10.json"
 with open(json_crawler, "r") as f:
     json_data = json.load(f)
     raw_texts = [d["text"] for d in json_data]
+
+
+raw_texts = [
+    "Acolo unde un prozator mai rudimentar ar fi cazut in pornografie, autorul reuseste o pagina admirabila, de, asa zicand, sex elevat: Era ceva special."
+]
 
 run_outputs = []
 for raw_text in raw_texts:
